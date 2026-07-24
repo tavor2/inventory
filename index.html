@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>ניהול מלאי · אולם אירועים</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:#F1F3F2;
+  --surface:#FFFFFF;
+  --ink:#16211D;
+  --ink-soft:#56635D;
+  --ink-faint:#8B978F;
+  --accent:#2B6E63;
+  --accent-dark:#1F5049;
+  --accent-tint:#E3EEEC;
+  --meat:#B5482A;
+  --dairy:#3A6EA5;
+  --pareve:#8C7A4B;
+  --drinks:#2FA0A6;
+  --danger:#C1442D;
+  --danger-tint:#FBE9E5;
+  --good:#2E8B57;
+  --good-tint:#E7F3EB;
+  --warn:#B9790F;
+  --warn-tint:#FAF0DC;
+  --border:#E2E6E4;
+  --radius:14px;
+  --shadow:0 1px 2px rgba(22,33,29,0.06),0 4px 16px rgba(22,33,29,0.06);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Heebo',system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+input,select,textarea,button{font-family:inherit;}
+.hidden{display:none !important;}
+button{cursor:pointer;}
+::selection{background:var(--accent-tint);}
+
+/* ============ LAYOUT SHELLS ============ */
+.screen{max-width:640px;margin:0 auto;min-height:100vh;padding-bottom:40px;}
+.screen-login{display:flex;align-items:center;justify-content:center;padding:24px;}
+
+/* ============ TOAST ============ */
+.toast{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-20px);
+  background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;
+  font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:all .25s ease;
+  z-index:999;box-shadow:var(--shadow);max-width:90vw;text-align:center;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.error{background:var(--danger);}
+
+/* ============ LOGIN ============ */
+.login-card{
+  background:var(--surface);border-radius:20px;padding:36px 28px;width:100%;max-width:380px;
+  box-shadow:var(--shadow);text-align:center;
+}
+.brand{margin-bottom:28px;}
+.brand-dot{
+  display:inline-block;width:14px;height:14px;border-radius:4px;background:var(--accent);
+  margin-bottom:14px;transform:rotate(45deg);
+}
+.brand-dot.small{width:9px;height:9px;margin-bottom:0;margin-left:8px;}
+.brand h1{font-size:24px;font-weight:800;margin:0 0 4px;letter-spacing:-0.02em;}
+.brand-sub{color:var(--ink-soft);font-size:14px;margin:0;}
+.role-select{display:flex;flex-direction:column;gap:12px;}
+.role-btn{
+  display:flex;align-items:center;gap:12px;justify-content:flex-start;
+  background:var(--bg);border:1.5px solid var(--border);border-radius:12px;
+  padding:16px 18px;font-size:16px;font-weight:600;color:var(--ink);
+  transition:border-color .15s, background .15s;
+}
+.role-btn:hover{border-color:var(--accent);background:var(--accent-tint);}
+.role-icon{font-size:18px;color:var(--accent);width:22px;text-align:center;}
+.pin-form{display:flex;flex-direction:column;gap:14px;margin-top:6px;}
+.pin-role-label{font-weight:700;font-size:15px;margin:0;color:var(--accent-dark);}
+.pin-form input{
+  padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);
+  font-size:20px;text-align:center;letter-spacing:6px;background:var(--bg);
+}
+.pin-form input:focus{outline:none;border-color:var(--accent);}
+.pin-actions{display:flex;gap:10px;}
+.pin-actions .btn-primary,.pin-actions .btn-ghost{flex:1;}
+.firebase-status{margin-top:18px;font-size:12px;color:var(--ink-faint);}
+
+/* ============ BUTTONS ============ */
+.btn-primary{
+  background:var(--accent);color:#fff;border:none;border-radius:12px;
+  padding:13px 20px;font-size:15px;font-weight:700;transition:background .15s;
+}
+.btn-primary:hover{background:var(--accent-dark);}
+.btn-ghost{
+  background:transparent;color:var(--ink-soft);border:1.5px solid var(--border);
+  border-radius:12px;padding:13px 20px;font-size:15px;font-weight:600;
+}
+.btn-ghost:hover{border-color:var(--ink-soft);}
+.full{width:100%;}
+.icon-btn{
+  background:var(--surface);border:1.5px solid var(--border);width:38px;height:38px;
+  border-radius:10px;font-size:16px;display:flex;align-items:center;justify-content:center;
+  color:var(--ink-soft);
+}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ============ TOPBAR ============ */
+.topbar{
+  position:sticky;top:0;z-index:20;background:rgba(241,243,242,0.92);backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px 10px;
+}
+.topbar-title{display:flex;align-items:center;font-weight:800;font-size:17px;}
+.topbar-actions{display:flex;gap:8px;}
+
+/* ============ SEARCH & CHIPS ============ */
+.search-bar{padding:6px 18px 10px;}
+.search-bar.small{padding:0 0 12px;}
+.search-bar input{
+  width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--border);
+  background:var(--surface);font-size:15px;
+}
+.search-bar input:focus{outline:none;border-color:var(--accent);}
+.chip-row{display:flex;gap:8px;padding:0 18px 14px;overflow-x:auto;}
+.chip{
+  flex:none;padding:8px 16px;border-radius:999px;border:1.5px solid var(--border);
+  background:var(--surface);font-size:13px;font-weight:600;color:var(--ink-soft);
+  white-space:nowrap;
+}
+.chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.chip.cat-meat.active{background:var(--meat);border-color:var(--meat);}
+.chip.cat-dairy.active{background:var(--dairy);border-color:var(--dairy);}
+.chip.cat-pareve.active{background:var(--pareve);border-color:var(--pareve);}
+.chip.cat-drinks.active{background:var(--drinks);border-color:var(--drinks);}
+
+/* ============ ITEM LIST / CARD ============ */
+.item-list{padding:0 18px;display:flex;flex-direction:column;gap:10px;}
+.cat-group-title{
+  font-size:12px;font-weight:700;color:var(--ink-faint);margin:14px 4px 6px;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.item-card{
+  background:var(--surface);border-radius:var(--radius);padding:14px 16px;
+  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
+  border-right:4px solid var(--border);
+}
+.item-card.read-only{cursor:default;}
+.item-card:not(.read-only){cursor:pointer;}
+.item-card.cat-meat{border-right-color:var(--meat);}
+.item-card.cat-dairy{border-right-color:var(--dairy);}
+.item-card.cat-pareve{border-right-color:var(--pareve);}
+.item-card.cat-drinks{border-right-color:var(--drinks);}
+.item-card-main{flex:1;min-width:0;}
+.item-card-name{font-weight:700;font-size:15px;margin-bottom:2px;}
+.item-card-unit{font-size:12px;color:var(--ink-faint);}
+.item-card-stock{text-align:left;}
+.item-card-stock-num{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:6px;}
+.status-dot.status-low{background:var(--danger);}
+.status-dot.status-ok{background:var(--good);}
+.status-dot.status-high{background:var(--warn);}
+.mini-gauge{width:70px;height:5px;border-radius:99px;background:var(--border);margin-top:6px;overflow:hidden;position:relative;}
+.mini-gauge-fill{height:100%;border-radius:99px;}
+.empty-state{color:var(--ink-faint);font-size:14px;text-align:center;padding:30px 20px;}
+
+/* ============ SHEETS (MODALS) ============ */
+.sheet{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;}
+.sheet-backdrop{position:absolute;inset:0;background:rgba(22,33,29,0.45);}
+.sheet-panel{
+  position:relative;background:var(--surface);width:100%;max-width:640px;
+  border-radius:20px 20px 0 0;padding:14px 20px 26px;max-height:88vh;overflow-y:auto;
+  animation:slideUp .25s ease;
+}
+.sheet-panel-large{max-height:92vh;}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.sheet-handle{width:40px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 16px;}
+.sheet-panel h3{margin:0 0 4px;font-size:18px;font-weight:800;}
+.sheet-meta{color:var(--ink-soft);font-size:13px;margin:0 0 18px;}
+
+.gauge-wrap{margin-bottom:20px;}
+.gauge-track{height:10px;border-radius:99px;background:var(--border);position:relative;overflow:visible;}
+.gauge-fill{height:100%;border-radius:99px;background:var(--accent);}
+.gauge-marker{position:absolute;top:-4px;width:3px;height:18px;background:var(--ink);border-radius:2px;}
+.gauge-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-faint);margin-top:6px;}
+
+.qty-stepper{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.stepper-btn{
+  width:46px;height:46px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg);
+  font-size:22px;font-weight:700;color:var(--accent-dark);display:flex;align-items:center;justify-content:center;
+}
+.stepper-btn:active{background:var(--accent-tint);}
+#qty-value{
+  flex:1;text-align:center;font-size:24px;font-weight:800;padding:12px;border-radius:12px;
+  border:1.5px solid var(--border);font-variant-numeric:tabular-nums;
+}
+.sheet-actions{display:flex;gap:10px;}
+.sheet-actions .btn-ghost,.sheet-actions .btn-primary{flex:1;}
+
+/* ============ MANAGEMENT ============ */
+.manage-tabs,.owner-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--bg);padding:4px;border-radius:12px;}
+.tab-btn{
+  flex:1;padding:10px;border-radius:9px;border:none;background:transparent;
+  font-size:13px;font-weight:700;color:var(--ink-soft);
+}
+.tab-btn.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+.owner-tabs{margin:0 18px 16px;}
+.tab-panel{}
+
+.form-grid{display:flex;flex-direction:column;gap:12px;}
+.form-grid label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--ink-soft);}
+.form-grid input,.form-grid select{
+  padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);font-size:15px;color:var(--ink);background:var(--surface);
+}
+.form-grid input:focus,.form-grid select:focus{outline:none;border-color:var(--accent);}
+
+.manage-list{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;margin-bottom:6px;}
+.manage-row{
+  display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:10px;padding:10px 12px;
+  border-right:4px solid var(--border);
+}
+.manage-row.cat-meat{border-right-color:var(--meat);}
+.manage-row.cat-dairy{border-right-color:var(--dairy);}
+.manage-row.cat-pareve{border-right-color:var(--pareve);}
+.manage-row.cat-drinks{border-right-color:var(--drinks);}
+.manage-row-info{flex:1;min-width:0;}
+.manage-row-name{font-weight:700;font-size:14px;}
+.manage-row-meta{font-size:11.5px;color:var(--ink-faint);}
+.manage-row-actions{display:flex;gap:6px;}
+.mini-btn{
+  width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);
+  font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);
+}
+.mini-btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+.mini-btn.edit:hover{border-color:var(--accent);color:var(--accent);}
+
+.hint-text{font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin:0 0 12px;background:var(--bg);padding:10px 12px;border-radius:10px;}
+.hint-text code{background:var(--surface);padding:1px 5px;border-radius:5px;font-size:11.5px;}
+#import-text{
+  width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);
+  font-size:13px;margin-bottom:12px;font-family:monospace;resize:vertical;
+}
+.close-manage{margin-top:16px;}
+
+/* edit inline form inside manage row */
+.edit-fields{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;width:100%;}
+.edit-fields input,.edit-fields select{padding:8px 10px;font-size:12.5px;border-radius:8px;border:1.5px solid var(--border);}
+.edit-fields .full-span{grid-column:1/-1;}
+
+/* ============ OWNER STAT STRIP ============ */
+.stat-strip{display:flex;gap:10px;padding:14px 18px;}
+.stat-card{
+  flex:1;background:var(--surface);border-radius:14px;padding:14px 10px;text-align:center;box-shadow:var(--shadow);
+}
+.stat-num{display:block;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;}
+.stat-label{font-size:11px;color:var(--ink-soft);font-weight:600;}
+.stat-low .stat-num{color:var(--danger);}
+.stat-high .stat-num{color:var(--warn);}
+.stat-events .stat-num{color:var(--accent);}
+
+/* ============ EVENTS & FORECAST ============ */
+.section-block{padding:0 18px;margin-bottom:26px;}
+.section-title{font-size:15px;font-weight:800;margin:0 0 12px;}
+.events-list{display:flex;flex-direction:column;gap:8px;}
+.event-row{
+  background:var(--surface);border-radius:12px;padding:12px 14px;display:flex;align-items:center;
+  gap:10px;box-shadow:var(--shadow);
+}
+.event-row-info{flex:1;}
+.event-row-name{font-weight:700;font-size:14px;}
+.event-row-meta{font-size:12px;color:var(--ink-soft);}
+.forecast-list{display:flex;flex-direction:column;gap:8px;}
+.forecast-row{
+  display:flex;align-items:center;justify-content:space-between;background:var(--surface);
+  border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);border-right:4px solid var(--border);
+}
+.forecast-row.short{border-right-color:var(--danger);}
+.forecast-row-name{font-weight:700;font-size:14px;}
+.forecast-row-detail{font-size:12px;color:var(--ink-soft);}
+.forecast-badge{font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;}
+.forecast-badge.short{background:var(--danger-tint);color:var(--danger);}
+.forecast-badge.ok{background:var(--good-tint);color:var(--good);}
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<!-- ===================== LOGIN ===================== -->
+<section id="screen-login" class="screen screen-login">
+  <div class="login-card">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <h1>ניהול מלאי</h1>
+      <p class="brand-sub">אולם אירועים</p>
+    </div>
+
+    <div class="role-select" id="role-select">
+      <button class="role-btn" data-role="warehouse">
+        <span class="role-icon">▤</span>
+        <span>כניסת מחסן</span>
+      </button>
+      <button class="role-btn" data-role="owner">
+        <span class="role-icon">◈</span>
+        <span>כניסת בעלים</span>
+      </button>
+    </div>
+
+    <form id="pin-form" class="pin-form hidden">
+      <p id="pin-role-label" class="pin-role-label"></p>
+      <input id="pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="הזן קוד כניסה" autocomplete="off">
+      <div class="pin-actions">
+        <button type="button" id="pin-back" class="btn-ghost">חזרה</button>
+        <button type="submit" class="btn-primary">כניסה</button>
+      </div>
+    </form>
+
+    <p id="firebase-status" class="firebase-status"></p>
+  </div>
+</section>
+
+<!-- ===================== WAREHOUSE SCREEN ===================== -->
+<section id="screen-warehouse" class="screen hidden">
+  <header class="topbar">
+    <div class="topbar-title"><span class="brand-dot small"></span><span>מסך מחסן</span></div>
+    <div class="topbar-actions">
+      <button id="wh-manage-btn" class="icon-btn" title="ניהול פריטים">⚙</button>
+      <button id="wh-logout-btn" class="icon-btn" title="יציאה">⏻</button>
+    </div>
+  </header>
+
+  <div class="search-bar"><input id="wh-search" type="search" placeholder="חיפוש מוצר..."></div>
+
+  <div class="chip-row" id="wh-category-filter">
+    <button class="chip active" data-cat="all">הכל</button>
+    <button class="chip cat-meat" data-cat="meat">בשרי</button>
+    <button class="chip cat-dairy" data-cat="dairy">חלבי</button>
+    <button class="chip cat-pareve" data-cat="pareve">פרווה</button>
+    <button class="chip cat-drinks" data-cat="drinks">שתייה</button>
+  </div>
+
+  <div id="wh-list" class="item-list"></div>
+  <p id="wh-empty" class="empty-state hidden">לא נמצאו פריטים. אפשר להוסיף פריטים דרך כפתור הניהול ⚙</p>
+</section>
+
+<!-- Item quantity editor sheet -->
+<div id="qty-sheet" class="sheet hidden">
+  <div class="sheet-backdrop" id="qty-backdrop"></div>
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <h3 id="qty-item-name">שם פריט</h3>
+    <p id="qty-item-meta" class="sheet-meta"></p>
+    <div class="gauge-wrap">
+      <div class="gauge-track"><div id="qty-gauge-fill" class="gauge-fill"></div><div id="qty-gauge-marker" class="gauge-marker"></div></div>
+      <div class="gauge-labels"><span id="qty-min-label"></span><span id="qty-max-label"></span></div>
+    </div>
+    <div class="qty-stepper">
+      <button id="qty-minus" class="stepper-btn" type="button">−</button>
+      <input id="qty-value" type="number" step="any" inputmode="decimal">
+      <button id="qty-plus" class="stepper-btn" type="button">+</button>
+    </div>
+    <div class="sheet-actions">
+      <button id="qty-cancel" class="btn-ghost">ביטול</button>
+      <button id="qty-save" class="btn-primary">שמור מלאי</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MANAGEMENT PANEL ===================== -->
+<div id="manage-sheet" class="sheet hidden">
+  <div class="sheet-backdrop" id="manage-backdrop"></div>
+  <div class="sheet-panel sheet-panel-large">
+    <div class="sheet-handle"></div>
+    <div class="manage-tabs">
+      <button class="tab-btn active" data-tab="items">פריטים</button>
+      <button class="tab-btn" data-tab="add">הוספת פריט</button>
+      <button class="tab-btn" data-tab="import">ייבוא מהיר</button>
+    </div>
+
+    <div id="tab-items" class="tab-panel">
+      <div class="search-bar small"><input id="manage-search" type="search" placeholder="חיפוש פריט לעריכה..."></div>
+      <div id="manage-list" class="manage-list"></div>
+    </div>
+
+    <div id="tab-add" class="tab-panel hidden">
+      <form id="add-item-form" class="form-grid">
+        <label>שם המוצר<input id="ai-name" type="text" required></label>
+        <label>קטגוריה
+          <select id="ai-category" required>
+            <option value="meat">בשרי</option>
+            <option value="dairy">חלבי</option>
+            <option value="pareve">פרווה</option>
+            <option value="drinks">שתייה</option>
+          </select>
+        </label>
+        <label>יחידת מידה
+          <input id="ai-unit" type="text" list="unit-suggestions" placeholder='ק"ג / יחידה / ארגז...' required>
+          <datalist id="unit-suggestions">
+            <option value='ק"ג'><option value="גרם"><option value="יחידה">
+            <option value="ארגז"><option value="בקבוק"><option value="ליטר"><option value="קרטון">
+          </datalist>
+        </label>
+        <label>מלאי התחלתי<input id="ai-stock" type="number" step="any" value="0" required></label>
+        <label>מינימום<input id="ai-min" type="number" step="any" value="0" required></label>
+        <label>מקסימום<input id="ai-max" type="number" step="any" value="0" required></label>
+        <label>צריכה ממוצעת לאורח (לתחזית)<input id="ai-perguest" type="number" step="any" value="0"></label>
+        <button type="submit" class="btn-primary full">הוסף פריט</button>
+      </form>
+    </div>
+
+    <div id="tab-import" class="tab-panel hidden">
+      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח</code></p>
+      <p class="hint-text">לדוגמה:<br><code>חזה עוף, meat, ק"ג, 40, 15, 60, 0.25</code></p>
+      <textarea id="import-text" rows="8" placeholder='חזה עוף, meat, ק"ג, 40, 15, 60, 0.25
+יין לבן, drinks, בקבוק, 30, 10, 50, 0.15'></textarea>
+      <button id="import-btn" class="btn-primary full">ייבא פריטים</button>
+    </div>
+
+    <button id="manage-close" class="btn-ghost full close-manage">סגירה</button>
+  </div>
+</div>
+
+<!-- ===================== OWNER SCREEN ===================== -->
+<section id="screen-owner" class="screen hidden">
+  <header class="topbar">
+    <div class="topbar-title"><span class="brand-dot small"></span><span>מסך בעלים</span></div>
+    <div class="topbar-actions">
+      <button id="ow-logout-btn" class="icon-btn" title="יציאה">⏻</button>
+    </div>
+  </header>
+
+  <div class="stat-strip">
+    <div class="stat-card stat-low"><span id="stat-low-count" class="stat-num">0</span><span class="stat-label">מתחת למינימום</span></div>
+    <div class="stat-card stat-high"><span id="stat-high-count" class="stat-num">0</span><span class="stat-label">מעל מקסימום</span></div>
+    <div class="stat-card stat-events"><span id="stat-events-count" class="stat-num">0</span><span class="stat-label">אירועים קרובים</span></div>
+  </div>
+
+  <div class="owner-tabs">
+    <button class="tab-btn active" data-owner-tab="status">סטטוס מלאי</button>
+    <button class="tab-btn" data-owner-tab="events">אירועים ותחזית</button>
+  </div>
+
+  <div id="owner-status-panel" class="tab-panel">
+    <div class="search-bar"><input id="ow-search" type="search" placeholder="חיפוש מוצר..."></div>
+    <div id="owner-status-list" class="item-list read-only"></div>
+  </div>
+
+  <div id="owner-events-panel" class="tab-panel hidden">
+    <div class="section-block">
+      <h3 class="section-title">הוספת אירוע</h3>
+      <form id="add-event-form" class="form-grid">
+        <label>שם האירוע<input id="ev-name" type="text" required></label>
+        <label>תאריך<input id="ev-date" type="date" required></label>
+        <label>מספר אורחים<input id="ev-guests" type="number" min="1" required></label>
+        <button type="submit" class="btn-primary full">הוסף אירוע</button>
+      </form>
+    </div>
+
+    <div class="section-block">
+      <h3 class="section-title">אירועים קרובים</h3>
+      <div id="events-list" class="events-list"></div>
+      <p id="events-empty" class="empty-state hidden">אין אירועים קרובים במערכת.</p>
+    </div>
+
+    <div class="section-block">
+      <h3 class="section-title">תחזית מלאי לאירועים קרובים</h3>
+      <p class="hint-text">כמות נדרשת מחושבת לפי סה"כ אורחים באירועים הקרובים, כפול צריכה ממוצעת לאורח שהוגדרה לכל פריט.</p>
+      <div id="forecast-list" class="forecast-list"></div>
+      <p id="forecast-empty" class="empty-state hidden">אין מספיק נתונים לתחזית. יש להגדיר "צריכה לאורח" לפריטים ולהוסיף אירועים.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+/* =====================================================================
+   הגדרות Firebase — יש להחליף בפרטים מהפרויקט שלכם ב-Firebase Console
+   (ראו הוראות בהודעה / בקובץ README שנשלח בנפרד)
+   ===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBmZ5w44c4tyVLu2u4lJJfO4HQ2WPesQaw",
+  authDomain: "inventory-b4b60.firebaseapp.com",
+  projectId: "inventory-b4b60",
+  storageBucket: "inventory-b4b60.firebasestorage.app",
+  messagingSenderId: "61111248203",
+  appId: "1:61111248203:web:861e7510c763af83cdb4ce"
+};
+
+/* קודי כניסה — שנו אותם לפני שאתם מפרסמים את האתר! (הקוד גלוי לכל מי שרואה את מקור הדף) */
+const PINS = {
+  warehouse: "1111",
+  owner: "2222"
+};
+
+/* =====================================================================
+   אתחול Firebase (משתמשים ב-Cloud Firestore)
+   ===================================================================== */
+let db = null;
+let firebaseReady = false;
+try{
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  firebaseReady = true;
+}catch(e){
+  console.error("Firebase init failed", e);
+}
+
+const CATEGORY_LABELS = { meat:"בשרי", dairy:"חלבי", pareve:"פרווה", drinks:"שתייה" };
+const CATEGORY_ORDER = ["meat","dairy","pareve","drinks"];
+
+let itemsData = {};   // id -> item
+let eventsData = {};  // id -> event
+let currentRole = null; // 'warehouse' | 'owner'
+let pendingRole = null;
+let activeQtyItemId = null;
+let whCategoryFilter = "all";
+let editingItemId = null;
+
+/* ---------- helpers ---------- */
+function $(sel){ return document.querySelector(sel); }
+function $all(sel){ return Array.from(document.querySelectorAll(sel)); }
+function showToast(msg, isError){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.toggle("error", !!isError);
+  t.classList.add("show");
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=> t.classList.remove("show"), 2400);
+}
+function fmtNum(n){
+  n = Number(n);
+  if (Number.isNaN(n)) return "0";
+  return (Math.round(n*100)/100).toString();
+}
+function itemStatus(item){
+  const s = Number(item.stock);
+  if (s < Number(item.min)) return "low";
+  if (s > Number(item.max)) return "high";
+  return "ok";
+}
+function statusColorVar(status){
+  return status === "low" ? "var(--danger)" : status === "high" ? "var(--warn)" : "var(--good)";
+}
+function gaugePercent(item){
+  const min = Number(item.min), max = Number(item.max), s = Number(item.stock);
+  if (max <= min) return 50;
+  let pct = ((s - min) / (max - min)) * 100;
+  return Math.max(0, Math.min(100, pct));
+}
+
+/* ---------- screen switching ---------- */
+function showScreen(id){
+  $all(".screen").forEach(s => s.classList.add("hidden"));
+  $("#"+id).classList.remove("hidden");
+}
+
+function setRole(role){
+  currentRole = role;
+  localStorage.setItem("inv_role", role);
+  if (role === "warehouse"){
+    showScreen("screen-warehouse");
+    renderWarehouseList();
+  } else if (role === "owner"){
+    showScreen("screen-owner");
+    renderOwnerAll();
+  }
+}
+
+function logout(){
+  currentRole = null;
+  localStorage.removeItem("inv_role");
+  $("#pin-input").value = "";
+  $("#pin-form").classList.add("hidden");
+  $("#role-select").classList.remove("hidden");
+  showScreen("screen-login");
+}
+
+/* ---------- LOGIN ---------- */
+$all(".role-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    pendingRole = btn.dataset.role;
+    $("#pin-role-label").textContent = pendingRole === "warehouse" ? "קוד כניסה - מחסן" : "קוד כניסה - בעלים";
+    $("#role-select").classList.add("hidden");
+    $("#pin-form").classList.remove("hidden");
+    $("#pin-input").value = "";
+    $("#pin-input").focus();
+  });
+});
+$("#pin-back").addEventListener("click", ()=>{
+  $("#pin-form").classList.add("hidden");
+  $("#role-select").classList.remove("hidden");
+});
+$("#pin-form").addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const val = $("#pin-input").value.trim();
+  if (val === PINS[pendingRole]){
+    setRole(pendingRole);
+  } else {
+    showToast("קוד שגוי, נסו שוב", true);
+    $("#pin-input").value = "";
+  }
+});
+
+$("#wh-logout-btn").addEventListener("click", logout);
+$("#ow-logout-btn").addEventListener("click", logout);
+
+/* ---------- FIREBASE LISTENERS ---------- */
+function initListeners(){
+  if (!firebaseReady){
+    $("#firebase-status").textContent = "⚠ Firebase לא מחובר — יש להגדיר firebaseConfig בקובץ.";
+    return;
+  }
+  $("#firebase-status").textContent = "";
+  db.collection("items").onSnapshot(snap=>{
+    itemsData = {};
+    snap.forEach(doc=>{ itemsData[doc.id] = doc.data(); });
+    renderAll();
+  }, err=>{
+    console.error(err);
+    $("#firebase-status").textContent = "⚠ שגיאת חיבור ל-Firestore: " + err.message;
+  });
+  db.collection("events").onSnapshot(snap=>{
+    eventsData = {};
+    snap.forEach(doc=>{ eventsData[doc.id] = doc.data(); });
+    renderAll();
+  });
+}
+function renderAll(){
+  if (currentRole === "warehouse"){ renderWarehouseList(); renderManageList(); }
+  if (currentRole === "owner"){ renderOwnerAll(); }
+}
+
+/* ---------- WAREHOUSE LIST ---------- */
+$("#wh-search").addEventListener("input", renderWarehouseList);
+$all("#wh-category-filter .chip").forEach(chip=>{
+  chip.addEventListener("click", ()=>{
+    whCategoryFilter = chip.dataset.cat;
+    $all("#wh-category-filter .chip").forEach(c=>c.classList.remove("active"));
+    chip.classList.add("active");
+    renderWarehouseList();
+  });
+});
+
+function getFilteredItems(searchVal, cat){
+  const q = (searchVal||"").trim().toLowerCase();
+  return Object.entries(itemsData).filter(([id,it])=>{
+    if (cat !== "all" && it.category !== cat) return false;
+    if (q && !(it.name||"").toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function buildItemCard(id, item, readOnly){
+  const status = itemStatus(item);
+  const pct = gaugePercent(item);
+  const card = document.createElement("div");
+  card.className = `item-card cat-${item.category}` + (readOnly ? " read-only" : "");
+  card.innerHTML = `
+    <div class="item-card-main">
+      <div class="item-card-name"><span class="status-dot status-${status}"></span>${escapeHtml(item.name)}</div>
+      <div class="item-card-unit">${escapeHtml(item.unit)} · מינ׳ ${fmtNum(item.min)} · מקס׳ ${fmtNum(item.max)}</div>
+      <div class="mini-gauge"><div class="mini-gauge-fill" style="width:${pct}%;background:${statusColorVar(status)}"></div></div>
+    </div>
+    <div class="item-card-stock">
+      <div class="item-card-stock-num">${fmtNum(item.stock)}</div>
+    </div>
+  `;
+  if (!readOnly){
+    card.addEventListener("click", ()=> openQtySheet(id));
+  }
+  return card;
+}
+
+function renderGroupedList(container, entries, readOnly, emptyEl){
+  container.innerHTML = "";
+  if (entries.length === 0){
+    if (emptyEl) emptyEl.classList.remove("hidden");
+    return;
+  }
+  if (emptyEl) emptyEl.classList.add("hidden");
+  const byCategory = {};
+  entries.forEach(([id,it])=>{
+    const c = it.category || "pareve";
+    (byCategory[c] = byCategory[c] || []).push([id,it]);
+  });
+  CATEGORY_ORDER.forEach(cat=>{
+    const group = byCategory[cat];
+    if (!group || group.length === 0) return;
+    const title = document.createElement("div");
+    title.className = "cat-group-title";
+    title.textContent = CATEGORY_LABELS[cat];
+    container.appendChild(title);
+    group.sort((a,b)=> (a[1].name||"").localeCompare(b[1].name||"", "he"));
+    group.forEach(([id,it])=> container.appendChild(buildItemCard(id, it, readOnly)));
+  });
+}
+
+function renderWarehouseList(){
+  const entries = getFilteredItems($("#wh-search").value, whCategoryFilter);
+  renderGroupedList($("#wh-list"), entries, false, $("#wh-empty"));
+}
+
+/* ---------- QTY SHEET ---------- */
+function openQtySheet(id){
+  const item = itemsData[id];
+  if (!item) return;
+  activeQtyItemId = id;
+  $("#qty-item-name").textContent = item.name;
+  $("#qty-item-meta").textContent = `${CATEGORY_LABELS[item.category]} · יחידה: ${item.unit}`;
+  $("#qty-value").value = item.stock;
+  $("#qty-min-label").textContent = "מינ׳ " + fmtNum(item.min);
+  $("#qty-max-label").textContent = "מקס׳ " + fmtNum(item.max);
+  updateGaugePreview();
+  $("#qty-sheet").classList.remove("hidden");
+}
+function closeQtySheet(){
+  $("#qty-sheet").classList.add("hidden");
+  activeQtyItemId = null;
+}
+function updateGaugePreview(){
+  const item = itemsData[activeQtyItemId];
+  if (!item) return;
+  const val = parseFloat($("#qty-value").value) || 0;
+  const tmp = {...item, stock: val};
+  const pct = gaugePercent(tmp);
+  const status = itemStatus(tmp);
+  $("#qty-gauge-fill").style.width = pct + "%";
+  $("#qty-gauge-fill").style.background = statusColorVar(status);
+  $("#qty-gauge-marker").style.right = pct + "%";
+}
+$("#qty-value").addEventListener("input", updateGaugePreview);
+$("#qty-minus").addEventListener("click", ()=>{
+  $("#qty-value").value = (parseFloat($("#qty-value").value)||0) - 1;
+  updateGaugePreview();
+});
+$("#qty-plus").addEventListener("click", ()=>{
+  $("#qty-value").value = (parseFloat($("#qty-value").value)||0) + 1;
+  updateGaugePreview();
+});
+$("#qty-cancel").addEventListener("click", closeQtySheet);
+$("#qty-backdrop").addEventListener("click", closeQtySheet);
+$("#qty-save").addEventListener("click", ()=>{
+  if (!activeQtyItemId) return;
+  const val = parseFloat($("#qty-value").value);
+  if (Number.isNaN(val) || val < 0){ showToast("כמות לא תקינה", true); return; }
+  db.collection("items").doc(activeQtyItemId).update({stock: val})
+    .then(()=>{ showToast("המלאי נשמר"); closeQtySheet(); })
+    .catch(()=> showToast("שגיאה בשמירה", true));
+});
+
+/* ---------- MANAGEMENT PANEL ---------- */
+$("#wh-manage-btn").addEventListener("click", ()=>{
+  $("#manage-sheet").classList.remove("hidden");
+  renderManageList();
+});
+$("#manage-close").addEventListener("click", ()=> $("#manage-sheet").classList.add("hidden"));
+$("#manage-backdrop").addEventListener("click", ()=> $("#manage-sheet").classList.add("hidden"));
+
+$all(".manage-tabs .tab-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    $all(".manage-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    ["items","add","import"].forEach(t=>{
+      $("#tab-"+t).classList.toggle("hidden", t !== btn.dataset.tab);
+    });
+  });
+});
+
+$("#manage-search").addEventListener("input", renderManageList);
+
+function renderManageList(){
+  const container = $("#manage-list");
+  if (!container) return;
+  const q = ($("#manage-search").value || "").trim().toLowerCase();
+  container.innerHTML = "";
+  const entries = Object.entries(itemsData)
+    .filter(([id,it]) => !q || (it.name||"").toLowerCase().includes(q))
+    .sort((a,b)=> (a[1].name||"").localeCompare(b[1].name||"", "he"));
+
+  if (entries.length === 0){
+    container.innerHTML = `<p class="empty-state">אין פריטים תואמים.</p>`;
+    return;
+  }
+
+  entries.forEach(([id, item])=>{
+    const row = document.createElement("div");
+    row.className = `manage-row cat-${item.category}`;
+    if (editingItemId === id){
+      row.innerHTML = editFieldsTemplate(item);
+      container.appendChild(row);
+      wireEditRow(row, id);
+    } else {
+      row.innerHTML = `
+        <div class="manage-row-info">
+          <div class="manage-row-name">${escapeHtml(item.name)}</div>
+          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}</div>
+        </div>
+        <div class="manage-row-actions">
+          <button class="mini-btn edit" data-edit="${id}" title="עריכה">✎</button>
+          <button class="mini-btn danger" data-del="${id}" title="מחיקה">🗑</button>
+        </div>
+      `;
+      container.appendChild(row);
+    }
+  });
+
+  $all("[data-edit]").forEach(b=> b.addEventListener("click", ()=>{ editingItemId = b.dataset.edit; renderManageList(); }));
+  $all("[data-del]").forEach(b=> b.addEventListener("click", ()=>{
+    const id = b.dataset.del;
+    const item = itemsData[id];
+    if (confirm(`למחוק את "${item?.name || ''}"? לא ניתן לשחזר.`)){
+      db.collection("items").doc(id).delete().then(()=> showToast("הפריט נמחק"));
+    }
+  }));
+}
+
+function editFieldsTemplate(item){
+  return `
+    <div class="edit-fields">
+      <input class="ef-name" value="${escapeAttr(item.name)}" placeholder="שם">
+      <select class="ef-category">
+        ${CATEGORY_ORDER.map(c=>`<option value="${c}" ${c===item.category?"selected":""}>${CATEGORY_LABELS[c]}</option>`).join("")}
+      </select>
+      <input class="ef-unit" value="${escapeAttr(item.unit)}" placeholder="יחידה">
+      <input class="ef-stock" type="number" step="any" value="${item.stock}" placeholder="מלאי">
+      <input class="ef-min" type="number" step="any" value="${item.min}" placeholder="מינימום">
+      <input class="ef-max" type="number" step="any" value="${item.max}" placeholder="מקסימום">
+      <input class="ef-perguest full-span" type="number" step="any" value="${item.perGuest||0}" placeholder="צריכה לאורח">
+      <div class="full-span" style="display:flex;gap:8px;">
+        <button type="button" class="btn-primary ef-save" style="flex:1;padding:9px;">שמור</button>
+        <button type="button" class="btn-ghost ef-cancel" style="flex:1;padding:9px;">ביטול</button>
+      </div>
+    </div>
+  `;
+}
+function wireEditRow(row, id){
+  row.querySelector(".ef-cancel").addEventListener("click", ()=>{ editingItemId = null; renderManageList(); });
+  row.querySelector(".ef-save").addEventListener("click", ()=>{
+    const updated = {
+      name: row.querySelector(".ef-name").value.trim(),
+      category: row.querySelector(".ef-category").value,
+      unit: row.querySelector(".ef-unit").value.trim(),
+      stock: parseFloat(row.querySelector(".ef-stock").value)||0,
+      min: parseFloat(row.querySelector(".ef-min").value)||0,
+      max: parseFloat(row.querySelector(".ef-max").value)||0,
+      perGuest: parseFloat(row.querySelector(".ef-perguest").value)||0
+    };
+    if (!updated.name){ showToast("יש להזין שם", true); return; }
+    db.collection("items").doc(id).update(updated).then(()=>{
+      showToast("הפריט עודכן");
+      editingItemId = null;
+      renderManageList();
+    });
+  });
+}
+
+/* ---------- ADD ITEM ---------- */
+$("#add-item-form").addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const item = {
+    name: $("#ai-name").value.trim(),
+    category: $("#ai-category").value,
+    unit: $("#ai-unit").value.trim(),
+    stock: parseFloat($("#ai-stock").value)||0,
+    min: parseFloat($("#ai-min").value)||0,
+    max: parseFloat($("#ai-max").value)||0,
+    perGuest: parseFloat($("#ai-perguest").value)||0
+  };
+  if (!item.name || !item.unit){ showToast("יש למלא שם ויחידה", true); return; }
+  db.collection("items").add(item).then(()=>{
+    showToast("הפריט נוסף בהצלחה");
+    e.target.reset();
+    $("#ai-stock").value = 0; $("#ai-min").value = 0; $("#ai-max").value = 0; $("#ai-perguest").value = 0;
+  });
+});
+
+/* ---------- BULK IMPORT ---------- */
+$("#import-btn").addEventListener("click", ()=>{
+  const text = $("#import-text").value.trim();
+  if (!text){ showToast("אין מה לייבא", true); return; }
+  const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+  const batch = db.batch();
+  let count = 0, errors = 0;
+  lines.forEach(line=>{
+    const parts = line.split(",").map(p=>p.trim());
+    if (parts.length < 6){ errors++; return; }
+    const [name, category, unit, stock, min, max, perGuest] = parts;
+    if (!CATEGORY_LABELS[category]){ errors++; return; }
+    const docRef = db.collection("items").doc();
+    batch.set(docRef, {
+      name, category, unit,
+      stock: parseFloat(stock)||0,
+      min: parseFloat(min)||0,
+      max: parseFloat(max)||0,
+      perGuest: parseFloat(perGuest)||0
+    });
+    count++;
+  });
+  if (count === 0){ showToast("לא נמצאו שורות תקינות לייבוא", true); return; }
+  batch.commit().then(()=>{
+    showToast(`יובאו ${count} פריטים${errors? " (״"+errors+" שורות נכשלו)" : ""}`);
+    $("#import-text").value = "";
+  });
+});
+
+/* ---------- OWNER: STATUS LIST ---------- */
+$("#ow-search").addEventListener("input", renderOwnerStatus);
+function renderOwnerStatus(){
+  const entries = getFilteredItems($("#ow-search").value, "all");
+  renderGroupedList($("#owner-status-list"), entries, true, null);
+}
+
+$all(".owner-tabs .tab-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    $all(".owner-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    $("#owner-status-panel").classList.toggle("hidden", btn.dataset.ownerTab !== "status");
+    $("#owner-events-panel").classList.toggle("hidden", btn.dataset.ownerTab !== "events");
+  });
+});
+
+/* ---------- OWNER: EVENTS ---------- */
+$("#add-event-form").addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const ev = {
+    name: $("#ev-name").value.trim(),
+    date: $("#ev-date").value,
+    guests: parseInt($("#ev-guests").value, 10) || 0
+  };
+  if (!ev.name || !ev.date || !ev.guests){ showToast("יש למלא את כל השדות", true); return; }
+  db.collection("events").add(ev).then(()=>{
+    showToast("האירוע נוסף");
+    e.target.reset();
+  });
+});
+
+function getUpcomingEvents(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Object.entries(eventsData)
+    .filter(([id,ev]) => new Date(ev.date) >= today)
+    .sort((a,b)=> new Date(a[1].date) - new Date(b[1].date));
+}
+
+function renderEventsList(){
+  const container = $("#events-list");
+  const upcoming = getUpcomingEvents();
+  container.innerHTML = "";
+  if (upcoming.length === 0){
+    $("#events-empty").classList.remove("hidden");
+  } else {
+    $("#events-empty").classList.add("hidden");
+    upcoming.forEach(([id,ev])=>{
+      const row = document.createElement("div");
+      row.className = "event-row";
+      const dateStr = new Date(ev.date).toLocaleDateString("he-IL", {day:"numeric", month:"short", year:"numeric"});
+      row.innerHTML = `
+        <div class="event-row-info">
+          <div class="event-row-name">${escapeHtml(ev.name)}</div>
+          <div class="event-row-meta">${dateStr} · ${ev.guests} אורחים</div>
+        </div>
+        <button class="mini-btn danger" data-delev="${id}" title="מחיקה">🗑</button>
+      `;
+      container.appendChild(row);
+    });
+    $all("[data-delev]").forEach(b=> b.addEventListener("click", ()=>{
+      if (confirm("למחוק את האירוע?")) db.collection("events").doc(b.dataset.delev).delete();
+    }));
+  }
+  $("#stat-events-count").textContent = upcoming.length;
+}
+
+/* ---------- OWNER: FORECAST ---------- */
+function renderForecast(){
+  const container = $("#forecast-list");
+  const upcoming = getUpcomingEvents();
+  const totalGuests = upcoming.reduce((sum,[id,ev])=> sum + (Number(ev.guests)||0), 0);
+  container.innerHTML = "";
+
+  const relevant = Object.entries(itemsData).filter(([id,it])=> Number(it.perGuest) > 0);
+
+  if (upcoming.length === 0 || relevant.length === 0){
+    $("#forecast-empty").classList.remove("hidden");
+    return;
+  }
+  $("#forecast-empty").classList.add("hidden");
+
+  relevant
+    .map(([id,it])=>{
+      const needed = totalGuests * Number(it.perGuest);
+      const short = needed > Number(it.stock);
+      return {id, it, needed, short};
+    })
+    .sort((a,b)=> (b.short - a.short) || (b.needed - a.needed))
+    .forEach(({id, it, needed, short})=>{
+      const row = document.createElement("div");
+      row.className = "forecast-row" + (short ? " short" : "");
+      row.innerHTML = `
+        <div>
+          <div class="forecast-row-name">${escapeHtml(it.name)}</div>
+          <div class="forecast-row-detail">נדרש ${fmtNum(needed)} ${escapeHtml(it.unit)} · במלאי ${fmtNum(it.stock)}</div>
+        </div>
+        <span class="forecast-badge ${short?'short':'ok'}">${short ? `חסר ${fmtNum(needed-it.stock)}` : "מספיק"}</span>
+      `;
+      container.appendChild(row);
+    });
+}
+
+/* ---------- OWNER: STAT STRIP ---------- */
+function renderOwnerStats(){
+  const items = Object.values(itemsData);
+  const low = items.filter(it=> itemStatus(it) === "low").length;
+  const high = items.filter(it=> itemStatus(it) === "high").length;
+  $("#stat-low-count").textContent = low;
+  $("#stat-high-count").textContent = high;
+}
+
+function renderOwnerAll(){
+  renderOwnerStatus();
+  renderOwnerStats();
+  renderEventsList();
+  renderForecast();
+}
+
+/* ---------- utils ---------- */
+function escapeHtml(str){
+  return String(str||"").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+/* ---------- INIT ---------- */
+window.addEventListener("DOMContentLoaded", ()=>{
+  initListeners();
+  const savedRole = localStorage.getItem("inv_role");
+  if (savedRole === "warehouse" || savedRole === "owner"){
+    setRole(savedRole);
+  }
+});
+</script>
+</body>
+</html>
