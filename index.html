@@ -124,11 +124,31 @@ button{cursor:pointer;}
 /* ============ SEARCH & CHIPS ============ */
 .search-bar{padding:6px 18px 10px;}
 .search-bar.small{padding:0 0 12px;}
+.search-bar-row{display:flex;gap:8px;align-items:center;}
+.search-bar-row input{flex:1;}
 .search-bar input{
   width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--border);
   background:var(--surface);font-size:15px;
 }
 .search-bar input:focus{outline:none;border-color:var(--accent);}
+.scan-btn{
+  flex:none;width:46px;height:46px;border-radius:12px;border:1.5px solid var(--accent);
+  background:var(--accent-tint);color:var(--accent-dark);font-size:19px;
+  display:flex;align-items:center;justify-content:center;
+}
+.scan-btn:active{background:var(--accent);color:#fff;}
+.field-with-scan{display:flex;gap:8px;align-items:stretch;}
+.field-with-scan input{flex:1;}
+.field-with-scan .scan-btn{width:46px;flex:none;}
+
+/* ============ SCANNER SHEET ============ */
+#scanner-region{
+  width:100%;border-radius:14px;overflow:hidden;background:#000;min-height:260px;
+}
+#scanner-region video{border-radius:14px;}
+.scan-hint{text-align:center;font-size:13px;color:var(--ink-soft);margin:12px 0 18px;}
+.scan-status{text-align:center;font-size:12.5px;color:var(--ink-faint);margin-top:8px;min-height:18px;}
+
 .chip-row{display:flex;gap:8px;padding:0 18px 14px;overflow-x:auto;}
 .chip{
   flex:none;padding:8px 16px;border-radius:999px;border:1.5px solid var(--border);
@@ -336,7 +356,7 @@ button{cursor:pointer;}
     </div>
   </header>
 
-  <div class="search-bar"><input id="wh-search" type="search" placeholder="חיפוש מוצר..."></div>
+  <div class="search-bar"><div class="search-bar-row"><input id="wh-search" type="search" placeholder="חיפוש מוצר..."><button id="wh-scan-btn" class="scan-btn" type="button" title="סריקת ברקוד">▤</button></div></div>
 
   <div class="chip-row" id="wh-category-filter">
     <button class="chip active" data-cat="all">הכל</button>
@@ -373,6 +393,21 @@ button{cursor:pointer;}
   </div>
 </div>
 
+<!-- Barcode scanner sheet -->
+<div id="scan-sheet" class="sheet hidden">
+  <div class="sheet-backdrop" id="scan-backdrop"></div>
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <h3>סריקת ברקוד</h3>
+    <p class="scan-hint">כוונו את המצלמה אל הברקוד שעל המוצר</p>
+    <div id="scanner-region"></div>
+    <p id="scan-status" class="scan-status"></p>
+    <div class="sheet-actions">
+      <button id="scan-cancel" class="btn-ghost full">ביטול</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== MANAGEMENT PANEL ===================== -->
 <div id="manage-sheet" class="sheet hidden">
   <div class="sheet-backdrop" id="manage-backdrop"></div>
@@ -392,6 +427,12 @@ button{cursor:pointer;}
     <div id="tab-add" class="tab-panel hidden">
       <form id="add-item-form" class="form-grid">
         <label>שם המוצר<input id="ai-name" type="text" required></label>
+        <label>ברקוד (לא חובה)
+          <div class="field-with-scan">
+            <input id="ai-barcode" type="text" placeholder="סרקו או הזינו ידנית">
+            <button type="button" id="ai-scan-btn" class="scan-btn" title="סריקת ברקוד">▤</button>
+          </div>
+        </label>
         <label>קטגוריה
           <select id="ai-category" required>
             <option value="meat">בשרי</option>
@@ -416,7 +457,7 @@ button{cursor:pointer;}
     </div>
 
     <div id="tab-import" class="tab-panel hidden">
-      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח</code></p>
+      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח, ברקוד (לא חובה)</code></p>
       <p class="hint-text">לדוגמה:<br><code>חזה עוף, meat, ק"ג, 40, 15, 60, 0.25</code></p>
       <textarea id="import-text" rows="8" placeholder='חזה עוף, meat, ק"ג, 40, 15, 60, 0.25
 יין לבן, drinks, בקבוק, 30, 10, 50, 0.15'></textarea>
@@ -481,6 +522,7 @@ button{cursor:pointer;}
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script>
 /* =====================================================================
@@ -758,6 +800,79 @@ $("#qty-save").addEventListener("click", ()=>{
     .catch(()=> showToast("שגיאה בשמירה", true));
 });
 
+/* ---------- BARCODE SCANNER ---------- */
+let html5QrCodeInstance = null;
+let scanResultCallback = null;
+
+function openScanner(onResult){
+  scanResultCallback = onResult;
+  $("#scan-status").textContent = "";
+  $("#scan-sheet").classList.remove("hidden");
+
+  if (typeof Html5Qrcode === "undefined"){
+    $("#scan-status").textContent = "⚠ ספריית הסריקה לא נטענה. בדקו את החיבור לאינטרנט.";
+    return;
+  }
+
+  html5QrCodeInstance = new Html5Qrcode("scanner-region", {
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
+      Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.ITF, Html5QrcodeSupportedFormats.CODABAR,
+      Html5QrcodeSupportedFormats.QR_CODE
+    ],
+    verbose: false
+  });
+
+  html5QrCodeInstance.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 260, height: 160 } },
+    (decodedText)=>{
+      const cb = scanResultCallback;
+      closeScanner();
+      if (cb) cb(decodedText);
+    },
+    ()=>{ /* per-frame scan failure, ignore */ }
+  ).catch(err=>{
+    console.error(err);
+    $("#scan-status").textContent = "⚠ לא ניתן לגשת למצלמה. ודאו שנתתם הרשאת מצלמה לדפדפן.";
+  });
+}
+
+function closeScanner(){
+  $("#scan-sheet").classList.add("hidden");
+  if (html5QrCodeInstance){
+    html5QrCodeInstance.stop().then(()=>{
+      html5QrCodeInstance.clear();
+      html5QrCodeInstance = null;
+    }).catch(()=>{ html5QrCodeInstance = null; });
+  }
+  scanResultCallback = null;
+}
+
+$("#scan-cancel").addEventListener("click", closeScanner);
+$("#scan-backdrop").addEventListener("click", closeScanner);
+
+function findItemByBarcode(code){
+  return Object.entries(itemsData).find(([id,it]) => (it.barcode||"").trim() === code.trim());
+}
+
+$("#wh-scan-btn").addEventListener("click", ()=>{
+  openScanner(code=>{
+    const match = findItemByBarcode(code);
+    if (match){
+      openQtySheet(match[0]);
+    } else {
+      showToast(`לא נמצא פריט עם הברקוד ${code}`, true);
+      $("#wh-manage-btn").click();
+      const addTabBtn = document.querySelector(".manage-tabs .tab-btn[data-tab='add']");
+      if (addTabBtn) addTabBtn.click();
+      $("#ai-barcode").value = code;
+    }
+  });
+});
+
 /* ---------- MANAGEMENT PANEL ---------- */
 $("#wh-manage-btn").addEventListener("click", ()=>{
   $("#manage-sheet").classList.remove("hidden");
@@ -803,7 +918,7 @@ function renderManageList(){
       row.innerHTML = `
         <div class="manage-row-info">
           <div class="manage-row-name">${escapeHtml(item.name)}</div>
-          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}</div>
+          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
         </div>
         <div class="manage-row-actions">
           <button class="mini-btn edit" data-edit="${id}" title="עריכה">✎</button>
@@ -835,7 +950,11 @@ function editFieldsTemplate(item){
       <input class="ef-stock" type="number" step="any" value="${item.stock}" placeholder="מלאי">
       <input class="ef-min" type="number" step="any" value="${item.min}" placeholder="מינימום">
       <input class="ef-max" type="number" step="any" value="${item.max}" placeholder="מקסימום">
-      <input class="ef-perguest full-span" type="number" step="any" value="${item.perGuest||0}" placeholder="צריכה לאורח">
+      <input class="ef-perguest" type="number" step="any" value="${item.perGuest||0}" placeholder="צריכה לאורח">
+      <div class="field-with-scan full-span">
+        <input class="ef-barcode" value="${escapeAttr(item.barcode||'')}" placeholder="ברקוד">
+        <button type="button" class="scan-btn ef-scan-btn" title="סריקת ברקוד">▤</button>
+      </div>
       <div class="full-span" style="display:flex;gap:8px;">
         <button type="button" class="btn-primary ef-save" style="flex:1;padding:9px;">שמור</button>
         <button type="button" class="btn-ghost ef-cancel" style="flex:1;padding:9px;">ביטול</button>
@@ -845,6 +964,9 @@ function editFieldsTemplate(item){
 }
 function wireEditRow(row, id){
   row.querySelector(".ef-cancel").addEventListener("click", ()=>{ editingItemId = null; renderManageList(); });
+  row.querySelector(".ef-scan-btn").addEventListener("click", ()=>{
+    openScanner(code=>{ row.querySelector(".ef-barcode").value = code; });
+  });
   row.querySelector(".ef-save").addEventListener("click", ()=>{
     const updated = {
       name: row.querySelector(".ef-name").value.trim(),
@@ -853,7 +975,8 @@ function wireEditRow(row, id){
       stock: parseFloat(row.querySelector(".ef-stock").value)||0,
       min: parseFloat(row.querySelector(".ef-min").value)||0,
       max: parseFloat(row.querySelector(".ef-max").value)||0,
-      perGuest: parseFloat(row.querySelector(".ef-perguest").value)||0
+      perGuest: parseFloat(row.querySelector(".ef-perguest").value)||0,
+      barcode: row.querySelector(".ef-barcode").value.trim()
     };
     if (!updated.name){ showToast("יש להזין שם", true); return; }
     db.collection("items").doc(id).update(updated).then(()=>{
@@ -874,7 +997,8 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     stock: parseFloat($("#ai-stock").value)||0,
     min: parseFloat($("#ai-min").value)||0,
     max: parseFloat($("#ai-max").value)||0,
-    perGuest: parseFloat($("#ai-perguest").value)||0
+    perGuest: parseFloat($("#ai-perguest").value)||0,
+    barcode: $("#ai-barcode").value.trim()
   };
   if (!item.name || !item.unit){ showToast("יש למלא שם ויחידה", true); return; }
   db.collection("items").add(item).then(()=>{
@@ -882,6 +1006,10 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     e.target.reset();
     $("#ai-stock").value = 0; $("#ai-min").value = 0; $("#ai-max").value = 0; $("#ai-perguest").value = 0;
   });
+});
+
+$("#ai-scan-btn").addEventListener("click", ()=>{
+  openScanner(code=>{ $("#ai-barcode").value = code; });
 });
 
 /* ---------- BULK IMPORT ---------- */
@@ -894,7 +1022,7 @@ $("#import-btn").addEventListener("click", ()=>{
   lines.forEach(line=>{
     const parts = line.split(",").map(p=>p.trim());
     if (parts.length < 6){ errors++; return; }
-    const [name, category, unit, stock, min, max, perGuest] = parts;
+    const [name, category, unit, stock, min, max, perGuest, barcode] = parts;
     if (!CATEGORY_LABELS[category]){ errors++; return; }
     const docRef = db.collection("items").doc();
     batch.set(docRef, {
@@ -902,7 +1030,8 @@ $("#import-btn").addEventListener("click", ()=>{
       stock: parseFloat(stock)||0,
       min: parseFloat(min)||0,
       max: parseFloat(max)||0,
-      perGuest: parseFloat(perGuest)||0
+      perGuest: parseFloat(perGuest)||0,
+      barcode: (barcode||"").trim()
     });
     count++;
   });
