@@ -212,18 +212,16 @@ button{cursor:pointer;}
 .sheet-panel h3{margin:0 0 4px;font-size:18px;font-weight:800;}
 .sheet-meta{color:var(--ink-soft);font-size:13px;margin:0 0 18px;}
 
-/* חלון הסריקה - ממלא את גובה המסך בלי גלילה */
-#scan-sheet .sheet-panel{
-  height:94vh;height:94dvh;max-height:94vh;max-height:94dvh;
-  display:flex;flex-direction:column;overflow:hidden;
-}
-#scan-sheet .sheet-handle,#scan-sheet h3,#scan-sheet .scan-hint{flex:none;}
-#scan-sheet h3{font-size:16px;}
-#scan-sheet .scan-hint{margin:4px 0 10px;font-size:12px;}
-#scan-sheet #scanner-region{flex:1 1 auto;min-height:0;}
-#scan-sheet .scan-status{flex:none;margin-top:6px;}
-#scan-sheet .scan-confirm{flex:none;}
-#scan-sheet #scan-cancel-wrap{flex:none;}
+/* חלון הסריקה - מצמצם מרווחים/טקסטים כדי שהכל ייכנס בלי לגעת בגודל אזור המצלמה עצמו
+   (שינוי גודל דינמי של אזור המצלמה מבלבל את ספריית הסריקה, שמחשבת מיקום ריבוע לפי הגודל בזמן הטעינה) */
+#scan-sheet .sheet-panel{max-height:96vh;max-height:96dvh;padding-top:10px;}
+#scan-sheet .sheet-handle{margin-bottom:8px;}
+#scan-sheet h3{font-size:15px;margin-bottom:2px;}
+#scan-sheet .scan-hint{margin:2px 0 8px;font-size:11.5px;line-height:1.4;}
+#scan-sheet .scan-status{margin-top:4px;min-height:16px;font-size:12px;}
+#scan-sheet .scan-confirm{margin-top:10px;}
+#scan-sheet .scan-confirm-note{margin:0 0 10px;}
+#scan-sheet .sheet-actions{margin-top:2px;}
 
 .gauge-wrap{margin-bottom:20px;}
 .gauge-track{height:10px;border-radius:99px;background:var(--border);position:relative;overflow:visible;}
@@ -890,13 +888,11 @@ function openScanner(onResult){
   }
   function onFrameFail(){ /* per-frame scan failure, ignore */ }
 
-  // ניסיון ראשון: הגדרות מתקדמות (רזולוציה גבוהה + מנוע מובנה)
   html5QrCodeInstance.start(
     { facingMode: "environment" },
     {
       fps: 8,
       qrbox: { width: 300, height: 130 },
-      disableFlip: false,
       experimentalFeatures: { useBarCodeDetectorIfSupported: true },
       videoConstraints: {
         facingMode: "environment",
@@ -908,10 +904,9 @@ function openScanner(onResult){
     onFrameFail
   ).catch(err=>{
     console.error("scan start (advanced) failed, retrying with basic settings", err);
-    // ניסיון שני: הגדרות בסיסיות בלבד, למקרה שהמכשיר לא תומך בבקשות המתקדמות
     html5QrCodeInstance.start(
       { facingMode: "environment" },
-      { fps: 8, qrbox: { width: 280, height: 140 } },
+      { fps: 10, qrbox: { width: 260, height: 160 } },
       onDecoded,
       onFrameFail
     ).catch(err2=>{
