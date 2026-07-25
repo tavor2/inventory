@@ -642,7 +642,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "1.8 - 2026-07-25";
+const APP_VERSION = "1.9 - 2026-07-25";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -659,6 +659,11 @@ try{
 
 const CATEGORY_LABELS = { meat:"בשרי", dairy:"חלבי", pareve:"פרווה", drinks:"שתייה" };
 const CATEGORY_ORDER = ["meat","dairy","pareve","drinks"];
+
+/* יחידות שנספרות במספרים שלמים בלבד (אי אפשר "חצי יחידה" או "חצי ארגז") */
+const WHOLE_UNITS = ['יחידה','ארגז','בקבוק','קרטון'];
+function isWholeUnit(unit){ return WHOLE_UNITS.includes((unit||"").trim()); }
+function roundForUnit(val, unit){ return isWholeUnit(unit) ? Math.round(Number(val)||0) : Number(val)||0; }
 
 let itemsData = {};   // id -> item
 let eventsData = {};  // id -> event
@@ -857,10 +862,15 @@ function openQtySheet(id){
   activeQtyItemId = id;
   $("#qty-item-name").textContent = item.name;
   $("#qty-item-meta").textContent = `${CATEGORY_LABELS[item.category]} · יחידה: ${item.unit}`;
-  $("#qty-value").value = item.stock;
+  const wholeUnit = isWholeUnit(item.unit);
+  const qtyValueEl = $("#qty-value");
+  qtyValueEl.value = wholeUnit ? Math.round(item.stock) : item.stock;
+  qtyValueEl.step = wholeUnit ? "1" : "any";
+  qtyValueEl.setAttribute("inputmode", wholeUnit ? "numeric" : "decimal");
   $("#qty-min-label").textContent = "מינ׳ " + fmtNum(item.min);
   $("#qty-max-label").textContent = "מקס׳ " + fmtNum(item.max);
   const slider = $("#qty-slider");
+  slider.step = wholeUnit ? "1" : "any";
   const min = Number(item.min), max = Number(item.max);
   if (max > min){
     slider.min = min; slider.max = max; slider.disabled = false;
@@ -868,7 +878,7 @@ function openQtySheet(id){
     // אין טווח תקין (מקסימום לא גדול ממינימום) - הסליידר לא רלוונטי, רק השדה המספרי
     slider.min = 0; slider.max = Math.max(Number(item.stock), 1); slider.disabled = true;
   }
-  slider.value = item.stock;
+  slider.value = qtyValueEl.value;
   const pkgBtn = $("#qty-add-package");
   if (Number(item.packageSize) > 0){
     pkgBtn.textContent = `+ אריזה שלמה (${fmtNum(item.packageSize)} ${item.unit})`;
@@ -886,6 +896,10 @@ function closeQtySheet(){
 function updateGaugePreview(){
   const item = itemsData[activeQtyItemId];
   if (!item) return;
+  if (isWholeUnit(item.unit)){
+    const rounded = Math.round(parseFloat($("#qty-value").value) || 0);
+    if (parseFloat($("#qty-value").value) !== rounded) $("#qty-value").value = rounded;
+  }
   const val = parseFloat($("#qty-value").value) || 0;
   const tmp = {...item, stock: val};
   const pct = gaugePercent(tmp);
@@ -911,7 +925,7 @@ $("#qty-add-package").addEventListener("click", ()=>{
   const item = itemsData[activeQtyItemId];
   if (!item) return;
   const pkg = Number(item.packageSize) || 0;
-  $("#qty-value").value = (parseFloat($("#qty-value").value)||0) + pkg;
+  $("#qty-value").value = roundForUnit((parseFloat($("#qty-value").value)||0) + pkg, item.unit);
   updateGaugePreview();
   showToast(`נוספה אריזה שלמה (${fmtNum(pkg)} ${item.unit})`);
 });
@@ -919,8 +933,10 @@ $("#qty-cancel").addEventListener("click", closeQtySheet);
 $("#qty-backdrop").addEventListener("click", closeQtySheet);
 $("#qty-save").addEventListener("click", ()=>{
   if (!activeQtyItemId) return;
-  const val = parseFloat($("#qty-value").value);
+  const item = itemsData[activeQtyItemId];
+  let val = parseFloat($("#qty-value").value);
   if (Number.isNaN(val) || val < 0){ showToast("כמות לא תקינה", true); return; }
+  if (item) val = roundForUnit(val, item.unit);
   db.collection("items").doc(activeQtyItemId).update({stock: val})
     .then(()=>{ showToast("המלאי נשמר"); closeQtySheet(); })
     .catch(()=> showToast("שגיאה בשמירה", true));
@@ -1180,11 +1196,11 @@ function wireEditRow(row, id){
       name: row.querySelector(".ef-name").value.trim(),
       category: row.querySelector(".ef-category").value,
       unit: unit,
-      stock: parseFloat(row.querySelector(".ef-stock").value)||0,
-      min: parseFloat(row.querySelector(".ef-min").value)||0,
-      max: parseFloat(row.querySelector(".ef-max").value)||0,
+      stock: roundForUnit(row.querySelector(".ef-stock").value, unit),
+      min: roundForUnit(row.querySelector(".ef-min").value, unit),
+      max: roundForUnit(row.querySelector(".ef-max").value, unit),
       perGuest: parseFloat(row.querySelector(".ef-perguest").value)||0,
-      packageSize: parseFloat(row.querySelector(".ef-package").value)||0,
+      packageSize: roundForUnit(row.querySelector(".ef-package").value, unit),
       barcode: row.querySelector(".ef-barcode").value.trim()
     };
     if (!updated.name){ showToast("יש להזין שם", true); return; }
@@ -1211,15 +1227,16 @@ $("#ai-unit-select").addEventListener("change", ()=>{
 
 $("#add-item-form").addEventListener("submit", (e)=>{
   e.preventDefault();
+  const unit = getSelectedUnit();
   const item = {
     name: $("#ai-name").value.trim(),
     category: $("#ai-category").value,
-    unit: getSelectedUnit(),
-    stock: parseFloat($("#ai-stock").value)||0,
-    min: parseFloat($("#ai-min").value)||0,
-    max: parseFloat($("#ai-max").value)||0,
+    unit: unit,
+    stock: roundForUnit($("#ai-stock").value, unit),
+    min: roundForUnit($("#ai-min").value, unit),
+    max: roundForUnit($("#ai-max").value, unit),
     perGuest: parseFloat($("#ai-perguest").value)||0,
-    packageSize: parseFloat($("#ai-package").value)||0,
+    packageSize: roundForUnit($("#ai-package").value, unit),
     barcode: $("#ai-barcode").value.trim()
   };
   if (!item.name || !item.unit){ showToast("יש למלא שם ולבחור/להזין יחידה", true); return; }
@@ -1293,11 +1310,11 @@ $("#import-btn").addEventListener("click", ()=>{
     const docRef = db.collection("items").doc();
     batch.set(docRef, {
       name, category, unit,
-      stock: parseFloat(stock)||0,
-      min: parseFloat(min)||0,
-      max: parseFloat(max)||0,
+      stock: roundForUnit(stock, unit),
+      min: roundForUnit(min, unit),
+      max: roundForUnit(max, unit),
       perGuest: parseFloat(perGuest)||0,
-      packageSize: parseFloat(packageSize)||0,
+      packageSize: roundForUnit(packageSize, unit),
       barcode: (barcode||"").trim()
     });
     count++;
