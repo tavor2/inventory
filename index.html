@@ -542,22 +542,26 @@ button{cursor:pointer;}
           </select>
           <input id="ai-unit-custom" type="text" placeholder="הזינו יחידה מותאמת אישית" class="hidden" style="margin-top:8px;">
         </label>
+        <p class="hint-text">כל הכמויות (מלאי, מינימום, צריכה לאורח וכו') נספרות ביחידת המידה שבחרתם למעלה. לדוגמה - אם ביצים נספרות ב"יחידה", בחרו כאן "יחידה" (לא "ארגז"), ולמטה ציינו כמה יחידות יש בכל ארגז.</p>
+        <label>מוצר מגיע באריזה? (אופציונלי)
+          <input id="ai-package-label" type="text" placeholder='לדוגמה: ארגז, קרטון, ניילון'>
+        </label>
+        <label>כמות ביחידת מידה בכל אריזה
+          <input id="ai-package" type="number" step="any" value="0" placeholder='לדוגמה: 40 (אם בארגז יש 40 יחידה)'>
+        </label>
         <label>מלאי התחלתי<input id="ai-stock" type="number" step="any" value="0" required></label>
         <label>מינימום<input id="ai-min" type="number" step="any" value="0" required></label>
         <label>מקסימום<input id="ai-max" type="number" step="any" value="0" required></label>
         <label>צריכה ממוצעת לאורח (לתחזית)<input id="ai-perguest" type="number" step="any" value="0"></label>
-        <label>כמות באריזה (אופציונלי)
-          <input id="ai-package" type="number" step="any" value="0" placeholder="לדוגמה: 12 יחידות בארגז, 20 ק&quot;ג בארגז">
-        </label>
         <button type="submit" class="btn-primary full">הוסף פריט</button>
       </form>
     </div>
 
     <div id="tab-import" class="tab-panel hidden">
-      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח, כמות באריזה (לא חובה), ברקוד (לא חובה)</code></p>
-      <p class="hint-text">לדוגמה:<br><code>חזה עוף, meat, ק"ג, 40, 15, 60, 0.25, 20</code></p>
-      <textarea id="import-text" rows="8" placeholder='חזה עוף, meat, ק"ג, 40, 15, 60, 0.25, 20
-יין לבן, drinks, בקבוק, 30, 10, 50, 0.15, 12'></textarea>
+      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח, כמות באריזה (לא חובה), שם אריזה (לא חובה), ברקוד (לא חובה)</code></p>
+      <p class="hint-text">לדוגמה:<br><code>ביצים, pareve, יחידה, 200, 50, 400, 2, 40, ארגז</code></p>
+      <textarea id="import-text" rows="8" placeholder='ביצים, pareve, יחידה, 200, 50, 400, 2, 40, ארגז
+יין לבן, drinks, בקבוק, 30, 10, 50, 0.15'></textarea>
       <button id="import-btn" class="btn-primary full">ייבא פריטים</button>
     </div>
 
@@ -642,7 +646,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "1.9 - 2026-07-25";
+const APP_VERSION = "2.0 - 2026-07-25";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -881,7 +885,8 @@ function openQtySheet(id){
   slider.value = qtyValueEl.value;
   const pkgBtn = $("#qty-add-package");
   if (Number(item.packageSize) > 0){
-    pkgBtn.textContent = `+ אריזה שלמה (${fmtNum(item.packageSize)} ${item.unit})`;
+    const label = (item.packageLabel||"").trim() || "אריזה שלמה";
+    pkgBtn.textContent = `+ ${label} (${fmtNum(item.packageSize)} ${item.unit})`;
     pkgBtn.classList.remove("hidden");
   } else {
     pkgBtn.classList.add("hidden");
@@ -927,7 +932,8 @@ $("#qty-add-package").addEventListener("click", ()=>{
   const pkg = Number(item.packageSize) || 0;
   $("#qty-value").value = roundForUnit((parseFloat($("#qty-value").value)||0) + pkg, item.unit);
   updateGaugePreview();
-  showToast(`נוספה אריזה שלמה (${fmtNum(pkg)} ${item.unit})`);
+  const label = (item.packageLabel||"").trim() || "אריזה";
+  showToast(`נוסף למלאי: ${label} (${fmtNum(pkg)} ${item.unit})`);
 });
 $("#qty-cancel").addEventListener("click", closeQtySheet);
 $("#qty-backdrop").addEventListener("click", closeQtySheet);
@@ -1123,7 +1129,7 @@ function renderManageList(){
       row.innerHTML = `
         <div class="manage-row-info">
           <div class="manage-row-name">${escapeHtml(item.name)}</div>
-          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${item.packageSize ? " · אריזה: "+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
+          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${item.packageSize ? " · "+escapeHtml(item.packageLabel||"אריזה")+": "+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
         </div>
         <div class="manage-row-actions">
           <button class="mini-btn edit" data-edit="${id}" title="עריכה">✎</button>
@@ -1159,11 +1165,12 @@ function editFieldsTemplate(item){
         <option value="__custom__" ${!isKnownUnit && item.unit ? "selected":""}>אחר (הזנה ידנית)...</option>
       </select>
       <input class="ef-unit-custom full-span ${isKnownUnit || !item.unit ? "hidden" : ""}" value="${!isKnownUnit ? escapeAttr(item.unit||"") : ""}" placeholder="הזינו יחידה מותאמת אישית">
+      <input class="ef-package-label full-span" value="${escapeAttr(item.packageLabel||'')}" placeholder="מוצר מגיע באריזה? (לדוגמה: ארגז)">
+      <input class="ef-package full-span" type="number" step="any" value="${item.packageSize||0}" placeholder="כמות ביחידת מידה בכל אריזה">
       <input class="ef-stock" type="number" step="any" value="${item.stock}" placeholder="מלאי">
       <input class="ef-min" type="number" step="any" value="${item.min}" placeholder="מינימום">
       <input class="ef-max" type="number" step="any" value="${item.max}" placeholder="מקסימום">
-      <input class="ef-perguest" type="number" step="any" value="${item.perGuest||0}" placeholder="צריכה לאורח">
-      <input class="ef-package full-span" type="number" step="any" value="${item.packageSize||0}" placeholder="כמות באריזה (אופציונלי)">
+      <input class="ef-perguest full-span" type="number" step="any" value="${item.perGuest||0}" placeholder="צריכה לאורח">
       <div class="field-with-scan full-span">
         <input class="ef-barcode" value="${escapeAttr(item.barcode||'')}" placeholder="ברקוד">
         <button type="button" class="scan-btn paste-btn ef-paste-btn" title="הדבקה מהלוח">📋</button>
@@ -1201,6 +1208,7 @@ function wireEditRow(row, id){
       max: roundForUnit(row.querySelector(".ef-max").value, unit),
       perGuest: parseFloat(row.querySelector(".ef-perguest").value)||0,
       packageSize: roundForUnit(row.querySelector(".ef-package").value, unit),
+      packageLabel: row.querySelector(".ef-package-label").value.trim(),
       barcode: row.querySelector(".ef-barcode").value.trim()
     };
     if (!updated.name){ showToast("יש להזין שם", true); return; }
@@ -1237,6 +1245,7 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     max: roundForUnit($("#ai-max").value, unit),
     perGuest: parseFloat($("#ai-perguest").value)||0,
     packageSize: roundForUnit($("#ai-package").value, unit),
+    packageLabel: $("#ai-package-label").value.trim(),
     barcode: $("#ai-barcode").value.trim()
   };
   if (!item.name || !item.unit){ showToast("יש למלא שם ולבחור/להזין יחידה", true); return; }
@@ -1305,7 +1314,7 @@ $("#import-btn").addEventListener("click", ()=>{
   lines.forEach(line=>{
     const parts = line.split(",").map(p=>p.trim());
     if (parts.length < 6){ errors++; return; }
-    const [name, category, unit, stock, min, max, perGuest, packageSize, barcode] = parts;
+    const [name, category, unit, stock, min, max, perGuest, packageSize, packageLabel, barcode] = parts;
     if (!CATEGORY_LABELS[category]){ errors++; return; }
     const docRef = db.collection("items").doc();
     batch.set(docRef, {
@@ -1315,6 +1324,7 @@ $("#import-btn").addEventListener("click", ()=>{
       max: roundForUnit(max, unit),
       perGuest: parseFloat(perGuest)||0,
       packageSize: roundForUnit(packageSize, unit),
+      packageLabel: (packageLabel||"").trim(),
       barcode: (barcode||"").trim()
     });
     count++;
