@@ -138,8 +138,10 @@ button{cursor:pointer;}
 }
 .scan-btn:active{background:var(--accent);color:#fff;}
 .field-with-scan{display:flex;gap:8px;align-items:stretch;}
-.field-with-scan input{flex:1;}
+.field-with-scan input{flex:1;min-width:0;}
 .field-with-scan .scan-btn{width:46px;flex:none;}
+.paste-btn{border-color:var(--border);background:var(--bg);color:var(--ink-soft);font-size:16px;}
+.paste-btn:active{background:var(--accent-tint);border-color:var(--accent);}
 
 /* ============ SCANNER SHEET ============ */
 #scanner-region{
@@ -148,6 +150,10 @@ button{cursor:pointer;}
 #scanner-region video{border-radius:14px;}
 .scan-hint{text-align:center;font-size:13px;color:var(--ink-soft);margin:12px 0 18px;}
 .scan-status{text-align:center;font-size:12.5px;color:var(--ink-faint);margin-top:8px;min-height:18px;}
+.scan-confirm{text-align:center;margin-top:16px;}
+.scan-confirm-label{font-size:12.5px;color:var(--ink-soft);margin:0 0 4px;}
+.scan-confirm-value{font-size:26px;font-weight:800;letter-spacing:1px;font-variant-numeric:tabular-nums;margin:0 0 6px;color:var(--accent-dark);direction:ltr;}
+.scan-confirm-note{font-size:12px;color:var(--ink-faint);margin:0 0 16px;}
 
 .chip-row{display:flex;gap:8px;padding:0 18px 14px;overflow-x:auto;}
 .chip{
@@ -400,10 +406,21 @@ button{cursor:pointer;}
   <div class="sheet-panel">
     <div class="sheet-handle"></div>
     <h3>סריקת ברקוד</h3>
-    <p class="scan-hint">כוונו את המצלמה אל הברקוד שעל המוצר</p>
+    <p class="scan-hint">כוונו את המצלמה אל הברקוד שעל המוצר, מרחק של כ-10 ס"מ, בתאורה טובה</p>
     <div id="scanner-region"></div>
     <p id="scan-status" class="scan-status"></p>
-    <div class="sheet-actions">
+
+    <div id="scan-confirm" class="scan-confirm hidden">
+      <p class="scan-confirm-label">זוהה ברקוד:</p>
+      <p class="scan-confirm-value" id="scan-confirm-value"></p>
+      <p class="scan-confirm-note">ודאו שהמספר תואם למה שמודפס על המוצר</p>
+      <div class="sheet-actions">
+        <button id="scan-retry" class="btn-ghost">סרוק שוב</button>
+        <button id="scan-confirm-btn" class="btn-primary">זה נכון, אישור</button>
+      </div>
+    </div>
+
+    <div class="sheet-actions" id="scan-cancel-wrap">
       <button id="scan-cancel" class="btn-ghost full">ביטול</button>
     </div>
   </div>
@@ -430,7 +447,8 @@ button{cursor:pointer;}
         <label>שם המוצר<input id="ai-name" type="text" required></label>
         <label>ברקוד (לא חובה)
           <div class="field-with-scan">
-            <input id="ai-barcode" type="text" placeholder="סרקו או הזינו ידנית">
+            <input id="ai-barcode" type="text" placeholder="סרקו, הדביקו או הזינו ידנית">
+            <button type="button" id="ai-paste-btn" class="scan-btn paste-btn" title="הדבקה מהלוח">📋</button>
             <button type="button" id="ai-scan-btn" class="scan-btn" title="סריקת ברקוד">▤</button>
           </div>
         </label>
@@ -804,10 +822,28 @@ $("#qty-save").addEventListener("click", ()=>{
 /* ---------- BARCODE SCANNER ---------- */
 let html5QrCodeInstance = null;
 let scanResultCallback = null;
+let pendingScanCode = null;
+
+/* בדיקת ספרת ביקורת תקנית (GS1) - EAN-8/EAN-13/UPC-A/ITF-14
+   מסננת קריאות שגויות שנובעות מטשטוש/זווית לא טובה */
+function isValidChecksum(code){
+  if (!/^\d+$/.test(code)) return true; // קוד לא מספרי (למשל CODE_39) - לא בודקים
+  if (![8,12,13,14].includes(code.length)) return true; // אורך לא מוכר - לא בודקים
+  const digits = code.split("").map(Number);
+  const checkDigit = digits[digits.length - 1];
+  const payload = digits.slice(0, -1).reverse();
+  let sum = 0;
+  payload.forEach((d,i)=>{ sum += d * (i % 2 === 0 ? 3 : 1); });
+  const calc = (10 - (sum % 10)) % 10;
+  return calc === checkDigit;
+}
 
 function openScanner(onResult){
   scanResultCallback = onResult;
+  pendingScanCode = null;
   $("#scan-status").textContent = "";
+  $("#scan-confirm").classList.add("hidden");
+  $("#scan-cancel-wrap").classList.remove("hidden");
   $("#scan-sheet").classList.remove("hidden");
 
   if (typeof Html5Qrcode === "undefined"){
@@ -830,9 +866,17 @@ function openScanner(onResult){
     { facingMode: "environment" },
     { fps: 10, qrbox: { width: 260, height: 160 } },
     (decodedText)=>{
-      const cb = scanResultCallback;
-      closeScanner();
-      if (cb) cb(decodedText);
+      if (pendingScanCode) return; // כבר יש מועמד ממתין לאישור
+      if (!isValidChecksum(decodedText)){
+        $("#scan-status").textContent = "קריאה לא ברורה, ממשיך לסרוק...";
+        return;
+      }
+      pendingScanCode = decodedText;
+      if (html5QrCodeInstance) html5QrCodeInstance.pause(true);
+      $("#scan-status").textContent = "";
+      $("#scan-confirm-value").textContent = decodedText;
+      $("#scan-confirm").classList.remove("hidden");
+      $("#scan-cancel-wrap").classList.add("hidden");
     },
     ()=>{ /* per-frame scan failure, ignore */ }
   ).catch(err=>{
@@ -843,6 +887,8 @@ function openScanner(onResult){
 
 function closeScanner(){
   $("#scan-sheet").classList.add("hidden");
+  $("#scan-confirm").classList.add("hidden");
+  pendingScanCode = null;
   if (html5QrCodeInstance){
     html5QrCodeInstance.stop().then(()=>{
       html5QrCodeInstance.clear();
@@ -854,6 +900,21 @@ function closeScanner(){
 
 $("#scan-cancel").addEventListener("click", closeScanner);
 $("#scan-backdrop").addEventListener("click", closeScanner);
+
+$("#scan-retry").addEventListener("click", ()=>{
+  pendingScanCode = null;
+  $("#scan-confirm").classList.add("hidden");
+  $("#scan-cancel-wrap").classList.remove("hidden");
+  $("#scan-status").textContent = "";
+  if (html5QrCodeInstance) html5QrCodeInstance.resume();
+});
+
+$("#scan-confirm-btn").addEventListener("click", ()=>{
+  const code = pendingScanCode;
+  const cb = scanResultCallback;
+  closeScanner();
+  if (cb && code) cb(code);
+});
 
 function findItemByBarcode(code){
   return Object.entries(itemsData).find(([id,it]) => (it.barcode||"").trim() === code.trim());
@@ -954,6 +1015,7 @@ function editFieldsTemplate(item){
       <input class="ef-perguest" type="number" step="any" value="${item.perGuest||0}" placeholder="צריכה לאורח">
       <div class="field-with-scan full-span">
         <input class="ef-barcode" value="${escapeAttr(item.barcode||'')}" placeholder="ברקוד">
+        <button type="button" class="scan-btn paste-btn ef-paste-btn" title="הדבקה מהלוח">📋</button>
         <button type="button" class="scan-btn ef-scan-btn" title="סריקת ברקוד">▤</button>
       </div>
       <div class="full-span" style="display:flex;gap:8px;">
@@ -967,6 +1029,9 @@ function wireEditRow(row, id){
   row.querySelector(".ef-cancel").addEventListener("click", ()=>{ editingItemId = null; renderManageList(); });
   row.querySelector(".ef-scan-btn").addEventListener("click", ()=>{
     openScanner(code=>{ row.querySelector(".ef-barcode").value = code; });
+  });
+  row.querySelector(".ef-paste-btn").addEventListener("click", ()=>{
+    pasteIntoField(row.querySelector(".ef-barcode"));
   });
   row.querySelector(".ef-save").addEventListener("click", ()=>{
     const updated = {
@@ -1010,8 +1075,48 @@ $("#add-item-form").addEventListener("submit", (e)=>{
 });
 
 $("#ai-scan-btn").addEventListener("click", ()=>{
-  openScanner(code=>{ $("#ai-barcode").value = code; });
+  openScanner(code=>{
+    $("#ai-barcode").value = code;
+    routeIfBarcodeExists(code);
+  });
 });
+$("#ai-paste-btn").addEventListener("click", ()=>{
+  pasteIntoField($("#ai-barcode"), code=> routeIfBarcodeExists(code));
+});
+
+/* אם הברקוד שהוזן/נסרק כבר משויך לפריט קיים - קופצים ישר לעריכה שלו, במקום ליצור כפילות */
+function routeIfBarcodeExists(code){
+  const match = findItemByBarcode(code);
+  if (!match) return;
+  const [id, item] = match;
+  showToast(`הברקוד כבר שייך לפריט "${item.name}" - עוברים אליו`);
+  $all(".manage-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelector(".manage-tabs .tab-btn[data-tab='items']").classList.add("active");
+  ["items","add","import"].forEach(t=> $("#tab-"+t).classList.toggle("hidden", t !== "items"));
+  $("#manage-search").value = item.name;
+  editingItemId = id;
+  renderManageList();
+}
+
+/* ---------- CLIPBOARD PASTE (לברקוד שסרקתם עם קורא הברקוד המובנה בטלפון) ---------- */
+async function pasteIntoField(inputEl, onSuccess){
+  if (!navigator.clipboard || !navigator.clipboard.readText){
+    showToast("הדפדפן לא תומך בהדבקה אוטומטית - הדביקו ידנית (לחיצה ארוכה על השדה)", true);
+    return;
+  }
+  try{
+    const text = await navigator.clipboard.readText();
+    const cleaned = text.trim();
+    if (!cleaned){ showToast("הלוח ריק", true); return; }
+    inputEl.value = cleaned;
+    inputEl.focus();
+    showToast("הודבק מהלוח");
+    if (onSuccess) onSuccess(cleaned);
+  }catch(err){
+    console.error(err);
+    showToast("לא ניתן לגשת ללוח - נסו להדביק ידנית (לחיצה ארוכה על השדה)", true);
+  }
+}
 
 /* ---------- BULK IMPORT ---------- */
 $("#import-btn").addEventListener("click", ()=>{
