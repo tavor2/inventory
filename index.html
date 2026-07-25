@@ -137,10 +137,18 @@ button{cursor:pointer;}
   color:var(--ink-soft);transition:border-color .15s, color .15s, background .15s;
 }
 .icon-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-tint);}
-.package-btn{
-  border-color:var(--brass);color:var(--brass-dark);background:var(--brass-tint);
-  font-weight:700;margin-bottom:14px;
+.package-row{
+  border:1.5px solid var(--brass);background:var(--brass-tint);border-radius:12px;
+  padding:12px 14px;margin-bottom:14px;
 }
+.package-row-caption{font-size:12.5px;font-weight:600;color:var(--brass-dark);margin-bottom:10px;}
+.package-row-controls{display:flex;align-items:center;gap:8px;}
+.package-row-text{font-size:13px;font-weight:600;color:var(--brass-dark);flex:none;}
+#qty-package-count{
+  width:64px;flex:none;text-align:center;font-size:16px;font-weight:700;padding:9px 4px;
+  border-radius:9px;border:1.5px solid var(--border);background:var(--surface);
+}
+.package-row-controls .btn-primary{flex:1;padding:10px 12px;font-size:13.5px;}
 .package-btn:hover{border-color:var(--brass-dark);background:var(--brass-tint);}
 
 /* ============ TOPBAR ============ */
@@ -461,7 +469,14 @@ button{cursor:pointer;}
       <input id="qty-value" type="number" step="any" inputmode="decimal">
       <button id="qty-plus" class="stepper-btn" type="button">+</button>
     </div>
-    <button id="qty-add-package" class="btn-ghost full package-btn hidden" type="button"></button>
+    <div id="qty-package-row" class="package-row hidden">
+      <div class="package-row-caption" id="qty-package-caption"></div>
+      <div class="package-row-controls">
+        <span class="package-row-text">כמה התקבלו?</span>
+        <input id="qty-package-count" type="number" min="1" step="1" inputmode="numeric" value="1">
+        <button id="qty-add-package" class="btn-primary" type="button">הוסף למלאי</button>
+      </div>
+    </div>
     <div class="sheet-actions">
       <button id="qty-cancel" class="btn-ghost">ביטול</button>
       <button id="qty-save" class="btn-primary">שמור מלאי</button>
@@ -545,7 +560,18 @@ button{cursor:pointer;}
         </label>
         <p class="hint-text">כל הכמויות (מלאי, מינימום, צריכה לאורח וכו') נספרות ביחידת המידה שבחרתם למעלה. לדוגמה - אם ביצים נספרות ב"יחידה", בחרו כאן "יחידה" (לא "ארגז"), ולמטה ציינו כמה יחידות יש בכל ארגז.</p>
         <label>מוצר מגיע באריזה? (אופציונלי)
-          <input id="ai-package-label" type="text" placeholder='לדוגמה: ארגז, קרטון, שישיה'>
+          <select id="ai-package-label-select">
+            <option value="">ללא / לא רלוונטי</option>
+            <option value="ארגז">ארגז</option>
+            <option value="קרטון">קרטון</option>
+            <option value="שישיה">שישיה</option>
+            <option value="חבית">חבית</option>
+            <option value="מגש">מגש</option>
+            <option value="שקית">שקית</option>
+            <option value="ניילון">ניילון</option>
+            <option value="__custom__">אחר (הזנה ידנית)...</option>
+          </select>
+          <input id="ai-package-label-custom" type="text" placeholder="הזינו סוג אריזה מותאם אישית" class="hidden" style="margin-top:8px;">
         </label>
         <label>כמה פריטים בודדים יש בכל אריזה
           <input id="ai-package-units" type="number" step="1" inputmode="numeric" value="0" placeholder='לדוגמה: 6 בקבוקים בשישיה'>
@@ -651,7 +677,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "2.3 - 2026-07-25";
+const APP_VERSION = "2.5 - 2026-07-25";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -899,16 +925,26 @@ function openQtySheet(id){
     slider.min = 0; slider.max = Math.max(Number(item.stock), 1); slider.disabled = true;
   }
   slider.value = qtyValueEl.value;
-  const pkgBtn = $("#qty-add-package");
+  const pkgRow = $("#qty-package-row");
   if (Number(item.packageSize) > 0){
-    const label = (item.packageLabel||"").trim() || "אריזה שלמה";
-    pkgBtn.textContent = `+ ${label} (${fmtNum(item.packageSize)} ${item.unit})`;
-    pkgBtn.classList.remove("hidden");
+    const label = (item.packageLabel||"").trim() || "אריזה";
+    $("#qty-package-caption").textContent = `${label} = ${fmtNum(item.packageSize)} ${item.unit}${item.packageUnitsCount ? ` (${fmtNum(item.packageUnitsCount)}×${fmtNum(item.packageUnitAmount||1)})` : ""}`;
+    $("#qty-package-count").value = 1;
+    updatePackageAddButton();
+    pkgRow.classList.remove("hidden");
   } else {
-    pkgBtn.classList.add("hidden");
+    pkgRow.classList.add("hidden");
   }
   updateGaugePreview();
   $("#qty-sheet").classList.remove("hidden");
+}
+function updatePackageAddButton(){
+  const item = itemsData[activeQtyItemId];
+  if (!item) return;
+  const label = (item.packageLabel||"").trim() || "אריזה";
+  const count = Math.max(1, parseInt($("#qty-package-count").value, 10) || 1);
+  const total = roundForUnit(count * (Number(item.packageSize)||0), item.unit);
+  $("#qty-add-package").textContent = `הוסף ${fmtNum(count)} ${label} (${fmtNum(total)} ${item.unit})`;
 }
 function closeQtySheet(){
   $("#qty-sheet").classList.add("hidden");
@@ -942,14 +978,18 @@ $("#qty-plus").addEventListener("click", ()=>{
   $("#qty-value").value = (parseFloat($("#qty-value").value)||0) + 1;
   updateGaugePreview();
 });
+$("#qty-package-count").addEventListener("input", updatePackageAddButton);
 $("#qty-add-package").addEventListener("click", ()=>{
   const item = itemsData[activeQtyItemId];
   if (!item) return;
-  const pkg = Number(item.packageSize) || 0;
-  $("#qty-value").value = roundForUnit((parseFloat($("#qty-value").value)||0) + pkg, item.unit);
+  const count = Math.max(1, parseInt($("#qty-package-count").value, 10) || 1);
+  const addAmount = roundForUnit(count * (Number(item.packageSize)||0), item.unit);
+  $("#qty-value").value = roundForUnit((parseFloat($("#qty-value").value)||0) + addAmount, item.unit);
   updateGaugePreview();
   const label = (item.packageLabel||"").trim() || "אריזה";
-  showToast(`נוסף למלאי: ${label} (${fmtNum(pkg)} ${item.unit})`);
+  showToast(`נוספו ${fmtNum(count)} ${label} (${fmtNum(addAmount)} ${item.unit}) למלאי`);
+  $("#qty-package-count").value = 1;
+  updatePackageAddButton();
 });
 $("#qty-cancel").addEventListener("click", closeQtySheet);
 $("#qty-backdrop").addEventListener("click", closeQtySheet);
@@ -1167,6 +1207,7 @@ function renderManageList(){
 }
 
 const UNIT_OPTIONS = ['ק"ג','גרם','יחידה','ארגז','בקבוק','ליטר','קרטון'];
+const PACKAGE_LABEL_OPTIONS = ['ארגז','קרטון','שישיה','חבית','מגש','שקית','ניילון'];
 function editFieldsTemplate(item){
   const isKnownUnit = UNIT_OPTIONS.includes(item.unit);
   return `
@@ -1188,7 +1229,14 @@ function editFieldsTemplate(item){
         <input class="ef-unit-custom" value="${!isKnownUnit ? escapeAttr(item.unit||"") : ""}" placeholder="הזינו יחידה מותאמת אישית">
       </label>
       <label class="full-span">מוצר מגיע באריזה? (אופציונלי)
-        <input class="ef-package-label" value="${escapeAttr(item.packageLabel||'')}" placeholder="לדוגמה: ארגז, קרטון, שישיה">
+        <select class="ef-package-label-select">
+          <option value="">ללא / לא רלוונטי</option>
+          ${PACKAGE_LABEL_OPTIONS.map(p=>`<option value="${escapeAttr(p)}" ${item.packageLabel===p?"selected":""}>${escapeHtml(p)}</option>`).join("")}
+          <option value="__custom__" ${item.packageLabel && !PACKAGE_LABEL_OPTIONS.includes(item.packageLabel) ? "selected":""}>אחר (הזנה ידנית)...</option>
+        </select>
+      </label>
+      <label class="ef-package-label-custom-wrap full-span ${!item.packageLabel || PACKAGE_LABEL_OPTIONS.includes(item.packageLabel) ? "hidden" : ""}">סוג אריזה מותאם אישית
+        <input class="ef-package-label-custom" value="${item.packageLabel && !PACKAGE_LABEL_OPTIONS.includes(item.packageLabel) ? escapeAttr(item.packageLabel) : ""}" placeholder="הזינו סוג אריזה מותאם אישית">
       </label>
       <label class="full-span">כמה פריטים בודדים יש בכל אריזה
         <input class="ef-package-units" type="number" step="1" inputmode="numeric" value="${item.packageUnitsCount != null ? item.packageUnitsCount : (item.packageSize||0)}" placeholder="לדוגמה: 6 בקבוקים בשישיה">
@@ -1222,6 +1270,15 @@ function wireEditRow(row, id){
     const sel = row.querySelector(".ef-unit-select").value;
     return sel === "__custom__" ? row.querySelector(".ef-unit-custom").value.trim() : sel;
   }
+  function currentPackageLabel(){
+    const sel = row.querySelector(".ef-package-label-select").value;
+    return sel === "__custom__" ? row.querySelector(".ef-package-label-custom").value.trim() : sel;
+  }
+  row.querySelector(".ef-package-label-select").addEventListener("change", ()=>{
+    const isCustom = row.querySelector(".ef-package-label-select").value === "__custom__";
+    row.querySelector(".ef-package-label-custom-wrap").classList.toggle("hidden", !isCustom);
+    if (isCustom) row.querySelector(".ef-package-label-custom").focus();
+  });
   function updateEditPackageCalc(){
     const unit = currentUnit() || "יחידת מידה";
     const pkgUnits = parseFloat(row.querySelector(".ef-package-units").value) || 0;
@@ -1266,7 +1323,7 @@ function wireEditRow(row, id){
       packageUnitsCount: Math.round(pkgUnits),
       packageUnitAmount: pkgUnitAmount,
       packageSize: roundForUnit(pkgUnits * pkgUnitAmount, unit),
-      packageLabel: row.querySelector(".ef-package-label").value.trim(),
+      packageLabel: currentPackageLabel(),
       barcode: row.querySelector(".ef-barcode").value.trim()
     };
     if (!updated.name){ showToast("יש להזין שם", true); return; }
@@ -1285,6 +1342,16 @@ function getSelectedUnit(){
   if (sel === "__custom__") return $("#ai-unit-custom").value.trim();
   return sel;
 }
+function getSelectedPackageLabel(){
+  const sel = $("#ai-package-label-select").value;
+  if (sel === "__custom__") return $("#ai-package-label-custom").value.trim();
+  return sel;
+}
+$("#ai-package-label-select").addEventListener("change", ()=>{
+  const isCustom = $("#ai-package-label-select").value === "__custom__";
+  $("#ai-package-label-custom").classList.toggle("hidden", !isCustom);
+  if (isCustom) $("#ai-package-label-custom").focus();
+});
 function updateAddPackageCalc(){
   const unit = getSelectedUnit() || "יחידת מידה";
   $all(".ai-package-unit-label").forEach(el=> el.textContent = unit);
@@ -1326,7 +1393,7 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     packageUnitsCount: Math.round(pkgUnits),
     packageUnitAmount: pkgUnitAmount,
     packageSize: roundForUnit(pkgUnits * pkgUnitAmount, unit),
-    packageLabel: $("#ai-package-label").value.trim(),
+    packageLabel: getSelectedPackageLabel(),
     barcode: $("#ai-barcode").value.trim()
   };
   if (!item.name || !item.unit){ showToast("יש למלא שם ולבחור/להזין יחידה", true); return; }
@@ -1336,6 +1403,7 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     $("#ai-unit-custom").classList.add("hidden");
     $("#ai-stock").value = 0; $("#ai-min").value = 0; $("#ai-max").value = 0; $("#ai-perguest").value = 0;
     $("#ai-package-units").value = 0; $("#ai-package-unit-amount").value = 1;
+    $("#ai-package-label-custom").classList.add("hidden");
     updateAddPackageCalc();
   });
 });
@@ -1598,7 +1666,7 @@ document.addEventListener("focusin", (e)=>{
 window.addEventListener("DOMContentLoaded", ()=>{
   $("#app-version").textContent = "גרסה " + APP_VERSION;
   console.log("ניהול מלאי - גרסה:", APP_VERSION);
-  ["#ai-stock","#ai-min","#ai-max","#ai-package-units"].forEach(sel=> stripDecimalLive($(sel)));
+  ["#ai-stock","#ai-min","#ai-max","#ai-package-units","#qty-package-count"].forEach(sel=> stripDecimalLive($(sel)));
   initListeners();
   const savedRole = localStorage.getItem("inv_role");
   if (savedRole === "warehouse" || savedRole === "owner"){
