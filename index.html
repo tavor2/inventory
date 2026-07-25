@@ -92,6 +92,7 @@ button{cursor:pointer;}
 .pin-actions{display:flex;gap:10px;}
 .pin-actions .btn-primary,.pin-actions .btn-ghost{flex:1;}
 .firebase-status{margin-top:18px;font-size:12px;color:var(--ink-faint);}
+.app-version{margin-top:6px;font-size:11px;color:var(--ink-faint);opacity:0.7;}
 
 /* ============ BUTTONS ============ */
 .btn-primary{
@@ -361,6 +362,7 @@ button{cursor:pointer;}
     </form>
 
     <p id="firebase-status" class="firebase-status"></p>
+    <p id="app-version" class="app-version"></p>
   </div>
 </section>
 
@@ -472,11 +474,18 @@ button{cursor:pointer;}
           </select>
         </label>
         <label>יחידת מידה
-          <input id="ai-unit" type="text" list="unit-suggestions" placeholder='ק"ג / יחידה / ארגז...' required>
-          <datalist id="unit-suggestions">
-            <option value='ק"ג'><option value="גרם"><option value="יחידה">
-            <option value="ארגז"><option value="בקבוק"><option value="ליטר"><option value="קרטון">
-          </datalist>
+          <select id="ai-unit-select" required>
+            <option value="">בחרו יחידה...</option>
+            <option value='ק&quot;ג'>ק"ג</option>
+            <option value="גרם">גרם</option>
+            <option value="יחידה">יחידה</option>
+            <option value="ארגז">ארגז</option>
+            <option value="בקבוק">בקבוק</option>
+            <option value="ליטר">ליטר</option>
+            <option value="קרטון">קרטון</option>
+            <option value="__custom__">אחר (הזנה ידנית)...</option>
+          </select>
+          <input id="ai-unit-custom" type="text" placeholder="הזינו יחידה מותאמת אישית" class="hidden" style="margin-top:8px;">
         </label>
         <label>מלאי התחלתי<input id="ai-stock" type="number" step="any" value="0" required></label>
         <label>מינימום<input id="ai-min" type="number" step="any" value="0" required></label>
@@ -573,6 +582,9 @@ const PINS = {
   warehouse: "1111",
   owner: "2222"
 };
+
+/* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
+const APP_VERSION = "1.6 - 2026-07-25";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -1032,14 +1044,21 @@ function renderManageList(){
   }));
 }
 
+const UNIT_OPTIONS = ['ק"ג','גרם','יחידה','ארגז','בקבוק','ליטר','קרטון'];
 function editFieldsTemplate(item){
+  const isKnownUnit = UNIT_OPTIONS.includes(item.unit);
   return `
     <div class="edit-fields">
       <input class="ef-name" value="${escapeAttr(item.name)}" placeholder="שם">
       <select class="ef-category">
         ${CATEGORY_ORDER.map(c=>`<option value="${c}" ${c===item.category?"selected":""}>${CATEGORY_LABELS[c]}</option>`).join("")}
       </select>
-      <input class="ef-unit" value="${escapeAttr(item.unit)}" placeholder="יחידה">
+      <select class="ef-unit-select full-span">
+        <option value="">בחרו יחידה...</option>
+        ${UNIT_OPTIONS.map(u=>`<option value="${escapeAttr(u)}" ${item.unit===u?"selected":""}>${escapeHtml(u)}</option>`).join("")}
+        <option value="__custom__" ${!isKnownUnit && item.unit ? "selected":""}>אחר (הזנה ידנית)...</option>
+      </select>
+      <input class="ef-unit-custom full-span ${isKnownUnit || !item.unit ? "hidden" : ""}" value="${!isKnownUnit ? escapeAttr(item.unit||"") : ""}" placeholder="הזינו יחידה מותאמת אישית">
       <input class="ef-stock" type="number" step="any" value="${item.stock}" placeholder="מלאי">
       <input class="ef-min" type="number" step="any" value="${item.min}" placeholder="מינימום">
       <input class="ef-max" type="number" step="any" value="${item.max}" placeholder="מקסימום">
@@ -1058,6 +1077,11 @@ function editFieldsTemplate(item){
 }
 function wireEditRow(row, id){
   row.querySelector(".ef-cancel").addEventListener("click", ()=>{ editingItemId = null; renderManageList(); });
+  row.querySelector(".ef-unit-select").addEventListener("change", ()=>{
+    const isCustom = row.querySelector(".ef-unit-select").value === "__custom__";
+    row.querySelector(".ef-unit-custom").classList.toggle("hidden", !isCustom);
+    if (isCustom) row.querySelector(".ef-unit-custom").focus();
+  });
   row.querySelector(".ef-scan-btn").addEventListener("click", ()=>{
     openScanner(code=>{ row.querySelector(".ef-barcode").value = code; });
   });
@@ -1065,10 +1089,12 @@ function wireEditRow(row, id){
     pasteIntoField(row.querySelector(".ef-barcode"));
   });
   row.querySelector(".ef-save").addEventListener("click", ()=>{
+    const unitSel = row.querySelector(".ef-unit-select").value;
+    const unit = unitSel === "__custom__" ? row.querySelector(".ef-unit-custom").value.trim() : unitSel;
     const updated = {
       name: row.querySelector(".ef-name").value.trim(),
       category: row.querySelector(".ef-category").value,
-      unit: row.querySelector(".ef-unit").value.trim(),
+      unit: unit,
       stock: parseFloat(row.querySelector(".ef-stock").value)||0,
       min: parseFloat(row.querySelector(".ef-min").value)||0,
       max: parseFloat(row.querySelector(".ef-max").value)||0,
@@ -1076,6 +1102,7 @@ function wireEditRow(row, id){
       barcode: row.querySelector(".ef-barcode").value.trim()
     };
     if (!updated.name){ showToast("יש להזין שם", true); return; }
+    if (!updated.unit){ showToast("יש לבחור/להזין יחידה", true); return; }
     db.collection("items").doc(id).update(updated).then(()=>{
       showToast("הפריט עודכן");
       editingItemId = null;
@@ -1085,22 +1112,34 @@ function wireEditRow(row, id){
 }
 
 /* ---------- ADD ITEM ---------- */
+function getSelectedUnit(){
+  const sel = $("#ai-unit-select").value;
+  if (sel === "__custom__") return $("#ai-unit-custom").value.trim();
+  return sel;
+}
+$("#ai-unit-select").addEventListener("change", ()=>{
+  const isCustom = $("#ai-unit-select").value === "__custom__";
+  $("#ai-unit-custom").classList.toggle("hidden", !isCustom);
+  if (isCustom) $("#ai-unit-custom").focus();
+});
+
 $("#add-item-form").addEventListener("submit", (e)=>{
   e.preventDefault();
   const item = {
     name: $("#ai-name").value.trim(),
     category: $("#ai-category").value,
-    unit: $("#ai-unit").value.trim(),
+    unit: getSelectedUnit(),
     stock: parseFloat($("#ai-stock").value)||0,
     min: parseFloat($("#ai-min").value)||0,
     max: parseFloat($("#ai-max").value)||0,
     perGuest: parseFloat($("#ai-perguest").value)||0,
     barcode: $("#ai-barcode").value.trim()
   };
-  if (!item.name || !item.unit){ showToast("יש למלא שם ויחידה", true); return; }
+  if (!item.name || !item.unit){ showToast("יש למלא שם ולבחור/להזין יחידה", true); return; }
   db.collection("items").add(item).then(()=>{
     showToast("הפריט נוסף בהצלחה");
     e.target.reset();
+    $("#ai-unit-custom").classList.add("hidden");
     $("#ai-stock").value = 0; $("#ai-min").value = 0; $("#ai-max").value = 0; $("#ai-perguest").value = 0;
   });
 });
@@ -1315,6 +1354,8 @@ document.addEventListener("focusin", (e)=>{
 
 /* ---------- INIT ---------- */
 window.addEventListener("DOMContentLoaded", ()=>{
+  $("#app-version").textContent = "גרסה " + APP_VERSION;
+  console.log("ניהול מלאי - גרסה:", APP_VERSION);
   initListeners();
   const savedRole = localStorage.getItem("inv_role");
   if (savedRole === "warehouse" || savedRole === "owner"){
