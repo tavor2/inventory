@@ -212,6 +212,19 @@ button{cursor:pointer;}
 .sheet-panel h3{margin:0 0 4px;font-size:18px;font-weight:800;}
 .sheet-meta{color:var(--ink-soft);font-size:13px;margin:0 0 18px;}
 
+/* חלון הסריקה - ממלא את גובה המסך בלי גלילה */
+#scan-sheet .sheet-panel{
+  height:94vh;height:94dvh;max-height:94vh;max-height:94dvh;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+#scan-sheet .sheet-handle,#scan-sheet h3,#scan-sheet .scan-hint{flex:none;}
+#scan-sheet h3{font-size:16px;}
+#scan-sheet .scan-hint{margin:4px 0 10px;font-size:12px;}
+#scan-sheet #scanner-region{flex:1 1 auto;min-height:0;}
+#scan-sheet .scan-status{flex:none;margin-top:6px;}
+#scan-sheet .scan-confirm{flex:none;}
+#scan-sheet #scan-cancel-wrap{flex:none;}
+
 .gauge-wrap{margin-bottom:20px;}
 .gauge-track{height:10px;border-radius:99px;background:var(--border);position:relative;overflow:visible;}
 .gauge-fill{height:100%;border-radius:99px;background:var(--accent);}
@@ -1103,6 +1116,9 @@ $("#ai-scan-btn").addEventListener("click", ()=>{
     routeIfBarcodeExists(code);
   });
 });
+$("#ai-barcode").addEventListener("change", ()=>{
+  routeIfBarcodeExists($("#ai-barcode").value.trim());
+});
 $("#ai-paste-btn").addEventListener("click", ()=>{
   pasteIntoField($("#ai-barcode"), code=> routeIfBarcodeExists(code));
 });
@@ -1294,6 +1310,13 @@ function escapeHtml(str){
   return String(str||"").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 }
 function escapeAttr(str){ return escapeHtml(str); }
+
+/* בחירת כל התוכן של שדה מספרי בעת פוקוס - כדי שאפשר יהיה להקליד ישר במקום למחוק את ה-0 קודם */
+document.addEventListener("focusin", (e)=>{
+  if (e.target && e.target.tagName === "INPUT" && e.target.type === "number"){
+    e.target.select();
+  }
+});
 
 /* ---------- INIT ---------- */
 window.addEventListener("DOMContentLoaded", ()=>{
