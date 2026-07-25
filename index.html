@@ -646,7 +646,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "2.0 - 2026-07-25";
+const APP_VERSION = "2.1 - 2026-07-25";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -676,6 +676,7 @@ let pendingRole = null;
 let activeQtyItemId = null;
 let whCategoryFilter = "all";
 let editingItemId = null;
+let editingEventId = null;
 
 /* ---------- helpers ---------- */
 function $(sel){ return document.querySelector(sel); }
@@ -1385,21 +1386,61 @@ function renderEventsList(){
     upcoming.forEach(([id,ev])=>{
       const row = document.createElement("div");
       row.className = "event-row";
-      const dateStr = new Date(ev.date).toLocaleDateString("he-IL", {day:"numeric", month:"short", year:"numeric"});
-      row.innerHTML = `
-        <div class="event-row-info">
-          <div class="event-row-name">${escapeHtml(ev.name)}</div>
-          <div class="event-row-meta">${dateStr} · ${ev.guests} אורחים</div>
-        </div>
-        <button class="mini-btn danger" data-delev="${id}" title="מחיקה">🗑</button>
-      `;
-      container.appendChild(row);
+      if (editingEventId === id){
+        row.innerHTML = eventEditFieldsTemplate(ev);
+        container.appendChild(row);
+        wireEventEditRow(row, id);
+      } else {
+        const dateStr = new Date(ev.date).toLocaleDateString("he-IL", {day:"numeric", month:"short", year:"numeric"});
+        row.innerHTML = `
+          <div class="event-row-info">
+            <div class="event-row-name">${escapeHtml(ev.name)}</div>
+            <div class="event-row-meta">${dateStr} · ${ev.guests} אורחים</div>
+          </div>
+          <div class="manage-row-actions">
+            <button class="mini-btn edit" data-editev="${id}" title="עריכה">✎</button>
+            <button class="mini-btn danger" data-delev="${id}" title="מחיקה">🗑</button>
+          </div>
+        `;
+        container.appendChild(row);
+      }
     });
+    $all("[data-editev]").forEach(b=> b.addEventListener("click", ()=>{ editingEventId = b.dataset.editev; renderEventsList(); }));
     $all("[data-delev]").forEach(b=> b.addEventListener("click", ()=>{
       if (confirm("למחוק את האירוע?")) db.collection("events").doc(b.dataset.delev).delete();
     }));
   }
   $("#stat-events-count").textContent = upcoming.length;
+}
+
+function eventEditFieldsTemplate(ev){
+  return `
+    <div class="edit-fields">
+      <input class="eev-name full-span" value="${escapeAttr(ev.name)}" placeholder="שם האירוע">
+      <input class="eev-date" type="date" value="${escapeAttr(ev.date)}">
+      <input class="eev-guests" type="number" min="1" step="1" value="${ev.guests}" placeholder="מספר אורחים">
+      <div class="full-span" style="display:flex;gap:8px;">
+        <button type="button" class="btn-primary eev-save" style="flex:1;padding:9px;">שמור</button>
+        <button type="button" class="btn-ghost eev-cancel" style="flex:1;padding:9px;">ביטול</button>
+      </div>
+    </div>
+  `;
+}
+function wireEventEditRow(row, id){
+  row.querySelector(".eev-cancel").addEventListener("click", ()=>{ editingEventId = null; renderEventsList(); });
+  row.querySelector(".eev-save").addEventListener("click", ()=>{
+    const updated = {
+      name: row.querySelector(".eev-name").value.trim(),
+      date: row.querySelector(".eev-date").value,
+      guests: parseInt(row.querySelector(".eev-guests").value, 10) || 0
+    };
+    if (!updated.name || !updated.date || !updated.guests){ showToast("יש למלא את כל השדות", true); return; }
+    db.collection("events").doc(id).update(updated).then(()=>{
+      showToast("האירוע עודכן");
+      editingEventId = null;
+      renderEventsList();
+    });
+  });
 }
 
 /* ---------- OWNER: FORECAST ---------- */
