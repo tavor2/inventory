@@ -545,11 +545,15 @@ button{cursor:pointer;}
         </label>
         <p class="hint-text">כל הכמויות (מלאי, מינימום, צריכה לאורח וכו') נספרות ביחידת המידה שבחרתם למעלה. לדוגמה - אם ביצים נספרות ב"יחידה", בחרו כאן "יחידה" (לא "ארגז"), ולמטה ציינו כמה יחידות יש בכל ארגז.</p>
         <label>מוצר מגיע באריזה? (אופציונלי)
-          <input id="ai-package-label" type="text" placeholder='לדוגמה: ארגז, קרטון, ניילון'>
+          <input id="ai-package-label" type="text" placeholder='לדוגמה: ארגז, קרטון, שישיה'>
         </label>
-        <label>כמות ביחידת מידה בכל אריזה
-          <input id="ai-package" type="number" step="1" inputmode="numeric" value="0" placeholder='לדוגמה: 40 (אם בארגז יש 40 יחידה)'>
+        <label>כמה פריטים בודדים יש בכל אריזה
+          <input id="ai-package-units" type="number" step="1" inputmode="numeric" value="0" placeholder='לדוגמה: 6 בקבוקים בשישיה'>
         </label>
+        <label>כמה <span class="ai-package-unit-label">יחידת מידה</span> יש בכל פריט בודד
+          <input id="ai-package-unit-amount" type="number" step="any" inputmode="decimal" value="1" placeholder='לדוגמה: 1.5 (ליטר בכל בקבוק)'>
+        </label>
+        <p id="ai-package-calc" class="hint-text hidden"></p>
         <label>מלאי התחלתי<input id="ai-stock" type="number" step="1" inputmode="numeric" value="0" required></label>
         <label>מינימום<input id="ai-min" type="number" step="1" inputmode="numeric" value="0" required></label>
         <label>מקסימום<input id="ai-max" type="number" step="1" inputmode="numeric" value="0" required></label>
@@ -559,10 +563,10 @@ button{cursor:pointer;}
     </div>
 
     <div id="tab-import" class="tab-panel hidden">
-      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח, כמות באריזה (לא חובה), שם אריזה (לא חובה), ברקוד (לא חובה)</code></p>
-      <p class="hint-text">לדוגמה:<br><code>ביצים, pareve, יחידה, 200, 50, 400, 2, 40, ארגז</code></p>
-      <textarea id="import-text" rows="8" placeholder='ביצים, pareve, יחידה, 200, 50, 400, 2, 40, ארגז
-יין לבן, drinks, בקבוק, 30, 10, 50, 0.15'></textarea>
+      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח, פריטים באריזה (לא חובה), כמות ליחידה בפריט (לא חובה), שם אריזה (לא חובה), ברקוד (לא חובה)</code></p>
+      <p class="hint-text">לדוגמה - קולה בשישיות של בקבוקי ליטר וחצי (6 בקבוקים, 1.5 ליטר כל אחד):<br><code>קולה, drinks, ליטר, 60, 15, 90, 0.3, 6, 1.5, שישיה</code></p>
+      <textarea id="import-text" rows="8" placeholder='קולה, drinks, ליטר, 60, 15, 90, 0.3, 6, 1.5, שישיה
+ביצים, pareve, יחידה, 200, 50, 400, 2, 40, 1, ארגז'></textarea>
       <button id="import-btn" class="btn-primary full">ייבא פריטים</button>
     </div>
 
@@ -647,7 +651,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "2.2 - 2026-07-25";
+const APP_VERSION = "2.3 - 2026-07-25";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -1141,7 +1145,7 @@ function renderManageList(){
       row.innerHTML = `
         <div class="manage-row-info">
           <div class="manage-row-name">${escapeHtml(item.name)}</div>
-          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${item.packageSize ? " · "+escapeHtml(item.packageLabel||"אריזה")+": "+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
+          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${item.packageSize ? " · "+escapeHtml(item.packageLabel||"אריזה")+": "+(item.packageUnitsCount ? fmtNum(item.packageUnitsCount)+"×"+fmtNum(item.packageUnitAmount||1)+"=" : "")+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
         </div>
         <div class="manage-row-actions">
           <button class="mini-btn edit" data-edit="${id}" title="עריכה">✎</button>
@@ -1184,11 +1188,15 @@ function editFieldsTemplate(item){
         <input class="ef-unit-custom" value="${!isKnownUnit ? escapeAttr(item.unit||"") : ""}" placeholder="הזינו יחידה מותאמת אישית">
       </label>
       <label class="full-span">מוצר מגיע באריזה? (אופציונלי)
-        <input class="ef-package-label" value="${escapeAttr(item.packageLabel||'')}" placeholder="לדוגמה: ארגז, קרטון, ניילון">
+        <input class="ef-package-label" value="${escapeAttr(item.packageLabel||'')}" placeholder="לדוגמה: ארגז, קרטון, שישיה">
       </label>
-      <label class="full-span">כמות ביחידת מידה בכל אריזה
-        <input class="ef-package" type="number" step="1" inputmode="numeric" value="${item.packageSize||0}" placeholder="לדוגמה: 40">
+      <label class="full-span">כמה פריטים בודדים יש בכל אריזה
+        <input class="ef-package-units" type="number" step="1" inputmode="numeric" value="${item.packageUnitsCount != null ? item.packageUnitsCount : (item.packageSize||0)}" placeholder="לדוגמה: 6 בקבוקים בשישיה">
       </label>
+      <label class="full-span">כמה ${escapeHtml(item.unit||"יחידת מידה")} יש בכל פריט בודד
+        <input class="ef-package-unit-amount" type="number" step="any" inputmode="decimal" value="${item.packageUnitAmount != null ? item.packageUnitAmount : 1}" placeholder="לדוגמה: 1.5">
+      </label>
+      <p class="ef-package-calc hint-text full-span hidden"></p>
       <label>מלאי<input class="ef-stock" type="number" step="1" inputmode="numeric" value="${item.stock}" placeholder="מלאי"></label>
       <label>מינימום<input class="ef-min" type="number" step="1" inputmode="numeric" value="${item.min}" placeholder="מינימום"></label>
       <label>מקסימום<input class="ef-max" type="number" step="1" inputmode="numeric" value="${item.max}" placeholder="מקסימום"></label>
@@ -1209,12 +1217,34 @@ function editFieldsTemplate(item){
 }
 function wireEditRow(row, id){
   row.querySelector(".ef-cancel").addEventListener("click", ()=>{ editingItemId = null; renderManageList(); });
-  [".ef-stock",".ef-min",".ef-max",".ef-package"].forEach(sel=> stripDecimalLive(row.querySelector(sel)));
+  [".ef-stock",".ef-min",".ef-max",".ef-package-units"].forEach(sel=> stripDecimalLive(row.querySelector(sel)));
+  function currentUnit(){
+    const sel = row.querySelector(".ef-unit-select").value;
+    return sel === "__custom__" ? row.querySelector(".ef-unit-custom").value.trim() : sel;
+  }
+  function updateEditPackageCalc(){
+    const unit = currentUnit() || "יחידת מידה";
+    const pkgUnits = parseFloat(row.querySelector(".ef-package-units").value) || 0;
+    const pkgUnitAmount = parseFloat(row.querySelector(".ef-package-unit-amount").value) || 0;
+    const calcEl = row.querySelector(".ef-package-calc");
+    if (pkgUnits > 0){
+      const total = roundForUnit(pkgUnits * pkgUnitAmount, unit);
+      calcEl.textContent = `= ${fmtNum(pkgUnits)} × ${fmtNum(pkgUnitAmount)} = ${fmtNum(total)} ${unit} בכל אריזה`;
+      calcEl.classList.remove("hidden");
+    } else {
+      calcEl.classList.add("hidden");
+    }
+  }
   row.querySelector(".ef-unit-select").addEventListener("change", ()=>{
     const isCustom = row.querySelector(".ef-unit-select").value === "__custom__";
     row.querySelector(".ef-unit-custom").closest("label").classList.toggle("hidden", !isCustom);
     if (isCustom) row.querySelector(".ef-unit-custom").focus();
+    updateEditPackageCalc();
   });
+  row.querySelector(".ef-unit-custom").addEventListener("input", updateEditPackageCalc);
+  row.querySelector(".ef-package-units").addEventListener("input", updateEditPackageCalc);
+  row.querySelector(".ef-package-unit-amount").addEventListener("input", updateEditPackageCalc);
+  updateEditPackageCalc();
   row.querySelector(".ef-scan-btn").addEventListener("click", ()=>{
     openScanner(code=>{ row.querySelector(".ef-barcode").value = code; });
   });
@@ -1222,8 +1252,9 @@ function wireEditRow(row, id){
     pasteIntoField(row.querySelector(".ef-barcode"));
   });
   row.querySelector(".ef-save").addEventListener("click", ()=>{
-    const unitSel = row.querySelector(".ef-unit-select").value;
-    const unit = unitSel === "__custom__" ? row.querySelector(".ef-unit-custom").value.trim() : unitSel;
+    const unit = currentUnit();
+    const pkgUnits = parseFloat(row.querySelector(".ef-package-units").value) || 0;
+    const pkgUnitAmount = parseFloat(row.querySelector(".ef-package-unit-amount").value) || 0;
     const updated = {
       name: row.querySelector(".ef-name").value.trim(),
       category: row.querySelector(".ef-category").value,
@@ -1232,7 +1263,9 @@ function wireEditRow(row, id){
       min: roundForUnit(row.querySelector(".ef-min").value, unit),
       max: roundForUnit(row.querySelector(".ef-max").value, unit),
       perGuest: parseFloat(row.querySelector(".ef-perguest").value)||0,
-      packageSize: roundForUnit(row.querySelector(".ef-package").value, unit),
+      packageUnitsCount: Math.round(pkgUnits),
+      packageUnitAmount: pkgUnitAmount,
+      packageSize: roundForUnit(pkgUnits * pkgUnitAmount, unit),
       packageLabel: row.querySelector(".ef-package-label").value.trim(),
       barcode: row.querySelector(".ef-barcode").value.trim()
     };
@@ -1252,15 +1285,36 @@ function getSelectedUnit(){
   if (sel === "__custom__") return $("#ai-unit-custom").value.trim();
   return sel;
 }
+function updateAddPackageCalc(){
+  const unit = getSelectedUnit() || "יחידת מידה";
+  $all(".ai-package-unit-label").forEach(el=> el.textContent = unit);
+  const pkgUnits = parseFloat($("#ai-package-units").value) || 0;
+  const pkgUnitAmount = parseFloat($("#ai-package-unit-amount").value) || 0;
+  const calcEl = $("#ai-package-calc");
+  if (pkgUnits > 0){
+    const total = roundForUnit(pkgUnits * pkgUnitAmount, unit);
+    calcEl.textContent = `= ${fmtNum(pkgUnits)} × ${fmtNum(pkgUnitAmount)} = ${fmtNum(total)} ${unit} בכל אריזה`;
+    calcEl.classList.remove("hidden");
+  } else {
+    calcEl.classList.add("hidden");
+  }
+}
 $("#ai-unit-select").addEventListener("change", ()=>{
   const isCustom = $("#ai-unit-select").value === "__custom__";
   $("#ai-unit-custom").classList.toggle("hidden", !isCustom);
   if (isCustom) $("#ai-unit-custom").focus();
+  updateAddPackageCalc();
 });
+$("#ai-unit-custom").addEventListener("input", updateAddPackageCalc);
+$("#ai-package-units").addEventListener("input", updateAddPackageCalc);
+$("#ai-package-unit-amount").addEventListener("input", updateAddPackageCalc);
+stripDecimalLive($("#ai-package-units"));
 
 $("#add-item-form").addEventListener("submit", (e)=>{
   e.preventDefault();
   const unit = getSelectedUnit();
+  const pkgUnits = parseFloat($("#ai-package-units").value) || 0;
+  const pkgUnitAmount = parseFloat($("#ai-package-unit-amount").value) || 0;
   const item = {
     name: $("#ai-name").value.trim(),
     category: $("#ai-category").value,
@@ -1269,7 +1323,9 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     min: roundForUnit($("#ai-min").value, unit),
     max: roundForUnit($("#ai-max").value, unit),
     perGuest: parseFloat($("#ai-perguest").value)||0,
-    packageSize: roundForUnit($("#ai-package").value, unit),
+    packageUnitsCount: Math.round(pkgUnits),
+    packageUnitAmount: pkgUnitAmount,
+    packageSize: roundForUnit(pkgUnits * pkgUnitAmount, unit),
     packageLabel: $("#ai-package-label").value.trim(),
     barcode: $("#ai-barcode").value.trim()
   };
@@ -1278,7 +1334,9 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     showToast("הפריט נוסף בהצלחה");
     e.target.reset();
     $("#ai-unit-custom").classList.add("hidden");
-    $("#ai-stock").value = 0; $("#ai-min").value = 0; $("#ai-max").value = 0; $("#ai-perguest").value = 0; $("#ai-package").value = 0;
+    $("#ai-stock").value = 0; $("#ai-min").value = 0; $("#ai-max").value = 0; $("#ai-perguest").value = 0;
+    $("#ai-package-units").value = 0; $("#ai-package-unit-amount").value = 1;
+    updateAddPackageCalc();
   });
 });
 
@@ -1339,8 +1397,10 @@ $("#import-btn").addEventListener("click", ()=>{
   lines.forEach(line=>{
     const parts = line.split(",").map(p=>p.trim());
     if (parts.length < 6){ errors++; return; }
-    const [name, category, unit, stock, min, max, perGuest, packageSize, packageLabel, barcode] = parts;
+    const [name, category, unit, stock, min, max, perGuest, packageUnits, packageUnitAmount, packageLabel, barcode] = parts;
     if (!CATEGORY_LABELS[category]){ errors++; return; }
+    const pkgUnits = parseFloat(packageUnits)||0;
+    const pkgUnitAmount = parseFloat(packageUnitAmount)||0;
     const docRef = db.collection("items").doc();
     batch.set(docRef, {
       name, category, unit,
@@ -1348,7 +1408,9 @@ $("#import-btn").addEventListener("click", ()=>{
       min: roundForUnit(min, unit),
       max: roundForUnit(max, unit),
       perGuest: parseFloat(perGuest)||0,
-      packageSize: roundForUnit(packageSize, unit),
+      packageUnitsCount: Math.round(pkgUnits),
+      packageUnitAmount: pkgUnitAmount,
+      packageSize: roundForUnit(pkgUnits * pkgUnitAmount, unit),
       packageLabel: (packageLabel||"").trim(),
       barcode: (barcode||"").trim()
     });
@@ -1536,7 +1598,7 @@ document.addEventListener("focusin", (e)=>{
 window.addEventListener("DOMContentLoaded", ()=>{
   $("#app-version").textContent = "גרסה " + APP_VERSION;
   console.log("ניהול מלאי - גרסה:", APP_VERSION);
-  ["#ai-stock","#ai-min","#ai-max","#ai-package"].forEach(sel=> stripDecimalLive($(sel)));
+  ["#ai-stock","#ai-min","#ai-max","#ai-package-units"].forEach(sel=> stripDecimalLive($(sel)));
   initListeners();
   const savedRole = localStorage.getItem("inv_role");
   if (savedRole === "warehouse" || savedRole === "owner"){
