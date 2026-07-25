@@ -236,7 +236,7 @@ button{cursor:pointer;}
 .sheet-backdrop{position:absolute;inset:0;background:rgba(22,33,29,0.45);}
 .sheet-panel{
   position:relative;background:var(--surface);width:100%;max-width:640px;
-  border-radius:20px 20px 0 0;padding:14px 20px 26px;max-height:88vh;overflow-y:auto;
+  border-radius:20px 20px 0 0;padding:14px 20px 26px;max-height:88vh;overflow-y:auto;overflow-x:hidden;
   animation:slideUp .25s ease;
 }
 .sheet-panel-large{max-height:92vh;}
@@ -258,18 +258,33 @@ button{cursor:pointer;}
 
 .gauge-wrap{margin-bottom:20px;}
 .gauge-track{height:10px;border-radius:99px;background:var(--border);position:relative;overflow:visible;}
-.gauge-fill{height:100%;border-radius:99px;background:var(--accent);}
-.gauge-marker{position:absolute;top:-4px;width:3px;height:18px;background:var(--ink);border-radius:2px;}
+.gauge-fill{height:100%;border-radius:99px;background:var(--accent);pointer-events:none;}
+.gauge-slider{
+  -webkit-appearance:none;appearance:none;position:absolute;inset:-13px 0;width:100%;height:36px;
+  margin:0;background:transparent;cursor:pointer;
+}
+.gauge-slider:focus{outline:none;}
+.gauge-slider::-webkit-slider-runnable-track{background:transparent;height:36px;}
+.gauge-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:24px;height:24px;border-radius:50%;margin-top:6px;
+  background:var(--surface);border:3px solid var(--accent);box-shadow:0 1px 4px rgba(22,33,29,0.3);
+}
+.gauge-slider::-moz-range-track{background:transparent;height:36px;border:none;}
+.gauge-slider::-moz-range-thumb{
+  width:24px;height:24px;border-radius:50%;background:var(--surface);border:3px solid var(--accent);
+  box-shadow:0 1px 4px rgba(22,33,29,0.3);
+}
+.gauge-slider:focus-visible::-webkit-slider-thumb{outline:2px solid var(--accent-dark);outline-offset:2px;}
 .gauge-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-faint);margin-top:6px;}
 
 .qty-stepper{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
 .stepper-btn{
-  width:46px;height:46px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg);
+  flex:none;width:46px;height:46px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg);
   font-size:22px;font-weight:700;color:var(--accent-dark);display:flex;align-items:center;justify-content:center;
 }
 .stepper-btn:active{background:var(--accent-tint);}
 #qty-value{
-  flex:1;text-align:center;font-size:24px;font-weight:800;padding:12px;border-radius:12px;
+  flex:1;min-width:0;text-align:center;font-size:24px;font-weight:800;padding:12px;border-radius:12px;
   border:1.5px solid var(--border);font-variant-numeric:tabular-nums;
 }
 .sheet-actions{display:flex;gap:10px;}
@@ -434,7 +449,10 @@ button{cursor:pointer;}
     <h3 id="qty-item-name">שם פריט</h3>
     <p id="qty-item-meta" class="sheet-meta"></p>
     <div class="gauge-wrap">
-      <div class="gauge-track"><div id="qty-gauge-fill" class="gauge-fill"></div><div id="qty-gauge-marker" class="gauge-marker"></div></div>
+      <div class="gauge-track">
+        <div id="qty-gauge-fill" class="gauge-fill"></div>
+        <input id="qty-slider" class="gauge-slider" type="range" step="any" aria-label="כמות במלאי">
+      </div>
       <div class="gauge-labels"><span id="qty-min-label"></span><span id="qty-max-label"></span></div>
     </div>
     <div class="qty-stepper">
@@ -624,7 +642,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "1.7 - 2026-07-25";
+const APP_VERSION = "1.8 - 2026-07-25";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -842,6 +860,15 @@ function openQtySheet(id){
   $("#qty-value").value = item.stock;
   $("#qty-min-label").textContent = "מינ׳ " + fmtNum(item.min);
   $("#qty-max-label").textContent = "מקס׳ " + fmtNum(item.max);
+  const slider = $("#qty-slider");
+  const min = Number(item.min), max = Number(item.max);
+  if (max > min){
+    slider.min = min; slider.max = max; slider.disabled = false;
+  } else {
+    // אין טווח תקין (מקסימום לא גדול ממינימום) - הסליידר לא רלוונטי, רק השדה המספרי
+    slider.min = 0; slider.max = Math.max(Number(item.stock), 1); slider.disabled = true;
+  }
+  slider.value = item.stock;
   const pkgBtn = $("#qty-add-package");
   if (Number(item.packageSize) > 0){
     pkgBtn.textContent = `+ אריזה שלמה (${fmtNum(item.packageSize)} ${item.unit})`;
@@ -865,9 +892,13 @@ function updateGaugePreview(){
   const status = itemStatus(tmp);
   $("#qty-gauge-fill").style.width = pct + "%";
   $("#qty-gauge-fill").style.background = statusColorVar(status);
-  $("#qty-gauge-marker").style.right = pct + "%";
+  if (document.activeElement !== $("#qty-slider")) $("#qty-slider").value = val;
 }
 $("#qty-value").addEventListener("input", updateGaugePreview);
+$("#qty-slider").addEventListener("input", ()=>{
+  $("#qty-value").value = fmtNum($("#qty-slider").value);
+  updateGaugePreview();
+});
 $("#qty-minus").addEventListener("click", ()=>{
   $("#qty-value").value = (parseFloat($("#qty-value").value)||0) - 1;
   updateGaugePreview();
