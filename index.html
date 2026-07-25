@@ -336,8 +336,9 @@ button{cursor:pointer;}
 .close-manage{margin-top:16px;}
 
 /* edit inline form inside manage row */
-.edit-fields{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;width:100%;}
-.edit-fields input,.edit-fields select{padding:8px 10px;font-size:12.5px;border-radius:8px;border:1.5px solid var(--border);}
+.edit-fields{display:grid;grid-template-columns:1fr;gap:10px;width:100%;}
+.edit-fields label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:700;color:var(--ink-soft);}
+.edit-fields input,.edit-fields select{padding:9px 10px;font-size:13.5px;border-radius:8px;border:1.5px solid var(--border);color:var(--ink);font-weight:500;}
 .edit-fields .full-span{grid-column:1/-1;}
 
 /* ============ OWNER STAT STRIP ============ */
@@ -547,11 +548,11 @@ button{cursor:pointer;}
           <input id="ai-package-label" type="text" placeholder='לדוגמה: ארגז, קרטון, ניילון'>
         </label>
         <label>כמות ביחידת מידה בכל אריזה
-          <input id="ai-package" type="number" step="any" value="0" placeholder='לדוגמה: 40 (אם בארגז יש 40 יחידה)'>
+          <input id="ai-package" type="number" step="1" inputmode="numeric" value="0" placeholder='לדוגמה: 40 (אם בארגז יש 40 יחידה)'>
         </label>
-        <label>מלאי התחלתי<input id="ai-stock" type="number" step="any" value="0" required></label>
-        <label>מינימום<input id="ai-min" type="number" step="any" value="0" required></label>
-        <label>מקסימום<input id="ai-max" type="number" step="any" value="0" required></label>
+        <label>מלאי התחלתי<input id="ai-stock" type="number" step="1" inputmode="numeric" value="0" required></label>
+        <label>מינימום<input id="ai-min" type="number" step="1" inputmode="numeric" value="0" required></label>
+        <label>מקסימום<input id="ai-max" type="number" step="1" inputmode="numeric" value="0" required></label>
         <label>צריכה ממוצעת לאורח (לתחזית)<input id="ai-perguest" type="number" step="any" value="0"></label>
         <button type="submit" class="btn-primary full">הוסף פריט</button>
       </form>
@@ -646,7 +647,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "2.1 - 2026-07-25";
+const APP_VERSION = "2.2 - 2026-07-25";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -665,9 +666,19 @@ const CATEGORY_LABELS = { meat:"בשרי", dairy:"חלבי", pareve:"פרווה"
 const CATEGORY_ORDER = ["meat","dairy","pareve","drinks"];
 
 /* יחידות שנספרות במספרים שלמים בלבד (אי אפשר "חצי יחידה" או "חצי ארגז") */
+/* לבקשת המשתמש: כל הכמויות (מלאי/מינימום/מקסימום/אריזה) הן תמיד מספרים שלמים,
+   ללא תלות ביחידת המידה (כולל ק"ג, גרם, ליטר וכו') */
 const WHOLE_UNITS = ['יחידה','ארגז','בקבוק','קרטון'];
-function isWholeUnit(unit){ return WHOLE_UNITS.includes((unit||"").trim()); }
-function roundForUnit(val, unit){ return isWholeUnit(unit) ? Math.round(Number(val)||0) : Number(val)||0; }
+function isWholeUnit(unit){ return true; }
+function roundForUnit(val, unit){ return Math.round(Number(val)||0); }
+function stripDecimalLive(el){
+  if (!el) return;
+  el.addEventListener("input", ()=>{
+    if (el.value.includes(".")){
+      el.value = Math.round(parseFloat(el.value)||0);
+    }
+  });
+}
 
 let itemsData = {};   // id -> item
 let eventsData = {};  // id -> event
@@ -1156,27 +1167,39 @@ function editFieldsTemplate(item){
   const isKnownUnit = UNIT_OPTIONS.includes(item.unit);
   return `
     <div class="edit-fields">
-      <input class="ef-name" value="${escapeAttr(item.name)}" placeholder="שם">
-      <select class="ef-category">
-        ${CATEGORY_ORDER.map(c=>`<option value="${c}" ${c===item.category?"selected":""}>${CATEGORY_LABELS[c]}</option>`).join("")}
-      </select>
-      <select class="ef-unit-select full-span">
-        <option value="">בחרו יחידה...</option>
-        ${UNIT_OPTIONS.map(u=>`<option value="${escapeAttr(u)}" ${item.unit===u?"selected":""}>${escapeHtml(u)}</option>`).join("")}
-        <option value="__custom__" ${!isKnownUnit && item.unit ? "selected":""}>אחר (הזנה ידנית)...</option>
-      </select>
-      <input class="ef-unit-custom full-span ${isKnownUnit || !item.unit ? "hidden" : ""}" value="${!isKnownUnit ? escapeAttr(item.unit||"") : ""}" placeholder="הזינו יחידה מותאמת אישית">
-      <input class="ef-package-label full-span" value="${escapeAttr(item.packageLabel||'')}" placeholder="מוצר מגיע באריזה? (לדוגמה: ארגז)">
-      <input class="ef-package full-span" type="number" step="any" value="${item.packageSize||0}" placeholder="כמות ביחידת מידה בכל אריזה">
-      <input class="ef-stock" type="number" step="any" value="${item.stock}" placeholder="מלאי">
-      <input class="ef-min" type="number" step="any" value="${item.min}" placeholder="מינימום">
-      <input class="ef-max" type="number" step="any" value="${item.max}" placeholder="מקסימום">
-      <input class="ef-perguest full-span" type="number" step="any" value="${item.perGuest||0}" placeholder="צריכה לאורח">
-      <div class="field-with-scan full-span">
-        <input class="ef-barcode" value="${escapeAttr(item.barcode||'')}" placeholder="ברקוד">
-        <button type="button" class="scan-btn paste-btn ef-paste-btn" title="הדבקה מהלוח">📋</button>
-        <button type="button" class="scan-btn ef-scan-btn" title="סריקת ברקוד">▤</button>
-      </div>
+      <label>שם המוצר<input class="ef-name" value="${escapeAttr(item.name)}" placeholder="שם"></label>
+      <label>קטגוריה
+        <select class="ef-category">
+          ${CATEGORY_ORDER.map(c=>`<option value="${c}" ${c===item.category?"selected":""}>${CATEGORY_LABELS[c]}</option>`).join("")}
+        </select>
+      </label>
+      <label class="full-span">יחידת מידה
+        <select class="ef-unit-select">
+          <option value="">בחרו יחידה...</option>
+          ${UNIT_OPTIONS.map(u=>`<option value="${escapeAttr(u)}" ${item.unit===u?"selected":""}>${escapeHtml(u)}</option>`).join("")}
+          <option value="__custom__" ${!isKnownUnit && item.unit ? "selected":""}>אחר (הזנה ידנית)...</option>
+        </select>
+      </label>
+      <label class="full-span ${isKnownUnit || !item.unit ? "hidden" : ""}">יחידה מותאמת אישית
+        <input class="ef-unit-custom" value="${!isKnownUnit ? escapeAttr(item.unit||"") : ""}" placeholder="הזינו יחידה מותאמת אישית">
+      </label>
+      <label class="full-span">מוצר מגיע באריזה? (אופציונלי)
+        <input class="ef-package-label" value="${escapeAttr(item.packageLabel||'')}" placeholder="לדוגמה: ארגז, קרטון, ניילון">
+      </label>
+      <label class="full-span">כמות ביחידת מידה בכל אריזה
+        <input class="ef-package" type="number" step="1" inputmode="numeric" value="${item.packageSize||0}" placeholder="לדוגמה: 40">
+      </label>
+      <label>מלאי<input class="ef-stock" type="number" step="1" inputmode="numeric" value="${item.stock}" placeholder="מלאי"></label>
+      <label>מינימום<input class="ef-min" type="number" step="1" inputmode="numeric" value="${item.min}" placeholder="מינימום"></label>
+      <label>מקסימום<input class="ef-max" type="number" step="1" inputmode="numeric" value="${item.max}" placeholder="מקסימום"></label>
+      <label class="full-span">צריכה ממוצעת לאורח (לתחזית)<input class="ef-perguest" type="number" step="any" inputmode="decimal" value="${item.perGuest||0}" placeholder="צריכה לאורח"></label>
+      <label class="full-span">ברקוד (לא חובה)
+        <div class="field-with-scan">
+          <input class="ef-barcode" value="${escapeAttr(item.barcode||'')}" placeholder="ברקוד">
+          <button type="button" class="scan-btn paste-btn ef-paste-btn" title="הדבקה מהלוח">📋</button>
+          <button type="button" class="scan-btn ef-scan-btn" title="סריקת ברקוד">▤</button>
+        </div>
+      </label>
       <div class="full-span" style="display:flex;gap:8px;">
         <button type="button" class="btn-primary ef-save" style="flex:1;padding:9px;">שמור</button>
         <button type="button" class="btn-ghost ef-cancel" style="flex:1;padding:9px;">ביטול</button>
@@ -1186,9 +1209,10 @@ function editFieldsTemplate(item){
 }
 function wireEditRow(row, id){
   row.querySelector(".ef-cancel").addEventListener("click", ()=>{ editingItemId = null; renderManageList(); });
+  [".ef-stock",".ef-min",".ef-max",".ef-package"].forEach(sel=> stripDecimalLive(row.querySelector(sel)));
   row.querySelector(".ef-unit-select").addEventListener("change", ()=>{
     const isCustom = row.querySelector(".ef-unit-select").value === "__custom__";
-    row.querySelector(".ef-unit-custom").classList.toggle("hidden", !isCustom);
+    row.querySelector(".ef-unit-custom").closest("label").classList.toggle("hidden", !isCustom);
     if (isCustom) row.querySelector(".ef-unit-custom").focus();
   });
   row.querySelector(".ef-scan-btn").addEventListener("click", ()=>{
@@ -1416,9 +1440,9 @@ function renderEventsList(){
 function eventEditFieldsTemplate(ev){
   return `
     <div class="edit-fields">
-      <input class="eev-name full-span" value="${escapeAttr(ev.name)}" placeholder="שם האירוע">
-      <input class="eev-date" type="date" value="${escapeAttr(ev.date)}">
-      <input class="eev-guests" type="number" min="1" step="1" value="${ev.guests}" placeholder="מספר אורחים">
+      <label class="full-span">שם האירוע<input class="eev-name" value="${escapeAttr(ev.name)}" placeholder="שם האירוע"></label>
+      <label>תאריך<input class="eev-date" type="date" value="${escapeAttr(ev.date)}"></label>
+      <label>מספר אורחים<input class="eev-guests" type="number" min="1" step="1" inputmode="numeric" value="${ev.guests}" placeholder="מספר אורחים"></label>
       <div class="full-span" style="display:flex;gap:8px;">
         <button type="button" class="btn-primary eev-save" style="flex:1;padding:9px;">שמור</button>
         <button type="button" class="btn-ghost eev-cancel" style="flex:1;padding:9px;">ביטול</button>
@@ -1512,6 +1536,7 @@ document.addEventListener("focusin", (e)=>{
 window.addEventListener("DOMContentLoaded", ()=>{
   $("#app-version").textContent = "גרסה " + APP_VERSION;
   console.log("ניהול מלאי - גרסה:", APP_VERSION);
+  ["#ai-stock","#ai-min","#ai-max","#ai-package"].forEach(sel=> stripDecimalLive($(sel)));
   initListeners();
   const savedRole = localStorage.getItem("inv_role");
   if (savedRole === "warehouse" || savedRole === "owner"){
