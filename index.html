@@ -18,6 +18,9 @@
   --accent:#2B6E63;
   --accent-dark:#1F5049;
   --accent-tint:#E3EEEC;
+  --brass:#B8863B;
+  --brass-dark:#93692B;
+  --brass-tint:#F3E9D6;
   --meat:#B5482A;
   --dairy:#3A6EA5;
   --pareve:#8C7A4B;
@@ -31,15 +34,20 @@
   --border:#E2E6E4;
   --radius:14px;
   --shadow:0 1px 2px rgba(22,33,29,0.06),0 4px 16px rgba(22,33,29,0.06);
+  --shadow-lift:0 2px 4px rgba(22,33,29,0.07),0 10px 28px rgba(22,33,29,0.10);
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 body{
   font-family:'Heebo',system-ui,sans-serif;
-  background:var(--bg);
+  background:
+    radial-gradient(1100px 420px at 15% -8%, rgba(43,110,99,0.06), transparent 60%),
+    radial-gradient(900px 380px at 100% 0%, rgba(184,134,59,0.05), transparent 55%),
+    var(--bg);
   color:var(--ink);
   min-height:100vh;
   -webkit-font-smoothing:antialiased;
+  letter-spacing:-0.01em;
 }
 input,select,textarea,button{font-family:inherit;}
 .hidden{display:none !important;}
@@ -62,26 +70,41 @@ button{cursor:pointer;}
 
 /* ============ LOGIN ============ */
 .login-card{
-  background:var(--surface);border-radius:20px;padding:36px 28px;width:100%;max-width:380px;
-  box-shadow:var(--shadow);text-align:center;
+  background:var(--surface);border-radius:24px;padding:40px 28px 32px;width:100%;max-width:380px;
+  box-shadow:var(--shadow-lift);text-align:center;border:1px solid rgba(22,33,29,0.04);
+  position:relative;overflow:hidden;
 }
-.brand{margin-bottom:28px;}
+.login-card::before{
+  content:"";position:absolute;top:0;right:0;left:0;height:5px;
+  background:linear-gradient(90deg,var(--accent),var(--brass));
+}
+.brand{margin-bottom:30px;}
 .brand-dot{
-  display:inline-block;width:14px;height:14px;border-radius:4px;background:var(--accent);
-  margin-bottom:14px;transform:rotate(45deg);
+  display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:11px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+  margin-bottom:16px;box-shadow:0 6px 16px rgba(43,110,99,0.28);
+  position:relative;
 }
-.brand-dot.small{width:9px;height:9px;margin-bottom:0;margin-left:8px;}
-.brand h1{font-size:24px;font-weight:800;margin:0 0 4px;letter-spacing:-0.02em;}
-.brand-sub{color:var(--ink-soft);font-size:14px;margin:0;}
+.brand-dot::after{
+  content:"";width:12px;height:12px;border-radius:3px;background:var(--brass);transform:rotate(45deg);
+}
+.brand-dot.small{width:22px;height:22px;border-radius:7px;margin-bottom:0;margin-left:10px;box-shadow:none;}
+.brand-dot.small::after{width:7px;height:7px;}
+.brand h1{font-size:25px;font-weight:800;margin:0 0 4px;letter-spacing:-0.02em;}
+.brand-sub{color:var(--ink-soft);font-size:13.5px;margin:0;font-weight:500;letter-spacing:.02em;}
 .role-select{display:flex;flex-direction:column;gap:12px;}
 .role-btn{
   display:flex;align-items:center;gap:12px;justify-content:flex-start;
-  background:var(--bg);border:1.5px solid var(--border);border-radius:12px;
-  padding:16px 18px;font-size:16px;font-weight:600;color:var(--ink);
-  transition:border-color .15s, background .15s;
+  background:var(--bg);border:1.5px solid var(--border);border-radius:13px;
+  padding:17px 18px;font-size:16px;font-weight:600;color:var(--ink);
+  transition:border-color .15s, background .15s, transform .15s;
 }
-.role-btn:hover{border-color:var(--accent);background:var(--accent-tint);}
-.role-icon{font-size:18px;color:var(--accent);width:22px;text-align:center;}
+.role-btn:hover{border-color:var(--accent);background:var(--accent-tint);transform:translateY(-1px);}
+.role-btn:active{transform:translateY(0);}
+.role-icon{
+  font-size:16px;color:var(--accent);width:30px;height:30px;flex:none;text-align:center;
+  display:flex;align-items:center;justify-content:center;background:var(--accent-tint);border-radius:9px;
+}
 .pin-form{display:flex;flex-direction:column;gap:14px;margin-top:6px;}
 .pin-role-label{font-weight:700;font-size:15px;margin:0;color:var(--accent-dark);}
 .pin-form input{
@@ -96,30 +119,37 @@ button{cursor:pointer;}
 
 /* ============ BUTTONS ============ */
 .btn-primary{
-  background:var(--accent);color:#fff;border:none;border-radius:12px;
-  padding:13px 20px;font-size:15px;font-weight:700;transition:background .15s;
+  background:linear-gradient(180deg,var(--accent),var(--accent-dark));color:#fff;border:none;border-radius:12px;
+  padding:14px 20px;font-size:15px;font-weight:700;transition:filter .15s, transform .1s;
+  box-shadow:0 3px 10px rgba(43,110,99,0.25);
 }
-.btn-primary:hover{background:var(--accent-dark);}
+.btn-primary:hover{filter:brightness(1.06);}
+.btn-primary:active{transform:translateY(1px);box-shadow:0 1px 4px rgba(43,110,99,0.25);}
 .btn-ghost{
-  background:transparent;color:var(--ink-soft);border:1.5px solid var(--border);
-  border-radius:12px;padding:13px 20px;font-size:15px;font-weight:600;
+  background:var(--surface);color:var(--ink-soft);border:1.5px solid var(--border);
+  border-radius:12px;padding:13.5px 20px;font-size:15px;font-weight:600;transition:border-color .15s, color .15s;
 }
-.btn-ghost:hover{border-color:var(--ink-soft);}
+.btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
 .full{width:100%;}
 .icon-btn{
   background:var(--surface);border:1.5px solid var(--border);width:38px;height:38px;
   border-radius:10px;font-size:16px;display:flex;align-items:center;justify-content:center;
-  color:var(--ink-soft);
+  color:var(--ink-soft);transition:border-color .15s, color .15s, background .15s;
 }
-.icon-btn:hover{border-color:var(--accent);color:var(--accent);}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-tint);}
+.package-btn{
+  border-color:var(--brass);color:var(--brass-dark);background:var(--brass-tint);
+  font-weight:700;margin-bottom:14px;
+}
+.package-btn:hover{border-color:var(--brass-dark);background:var(--brass-tint);}
 
 /* ============ TOPBAR ============ */
 .topbar{
   position:sticky;top:0;z-index:20;background:rgba(241,243,242,0.92);backdrop-filter:blur(8px);
   display:flex;align-items:center;justify-content:space-between;
-  padding:16px 18px 10px;
+  padding:16px 18px;border-bottom:1px solid rgba(22,33,29,0.06);
 }
-.topbar-title{display:flex;align-items:center;font-weight:800;font-size:17px;}
+.topbar-title{display:flex;align-items:center;font-weight:800;font-size:16.5px;letter-spacing:-0.01em;}
 .topbar-actions{display:flex;gap:8px;}
 
 /* ============ SEARCH & CHIPS ============ */
@@ -156,11 +186,12 @@ button{cursor:pointer;}
 .scan-confirm-value{font-size:26px;font-weight:800;letter-spacing:1px;font-variant-numeric:tabular-nums;margin:0 0 6px;color:var(--accent-dark);direction:ltr;}
 .scan-confirm-note{font-size:12px;color:var(--ink-faint);margin:0 0 16px;}
 
-.chip-row{display:flex;gap:8px;padding:0 18px 14px;overflow-x:auto;}
+.chip-row{display:flex;gap:8px;padding:0 18px 14px;overflow-x:auto;scrollbar-width:none;}
+.chip-row::-webkit-scrollbar{display:none;}
 .chip{
   flex:none;padding:8px 16px;border-radius:999px;border:1.5px solid var(--border);
   background:var(--surface);font-size:13px;font-weight:600;color:var(--ink-soft);
-  white-space:nowrap;
+  white-space:nowrap;transition:background .15s, border-color .15s, color .15s;
 }
 .chip.active{background:var(--ink);color:#fff;border-color:var(--ink);}
 .chip.cat-meat.active{background:var(--meat);border-color:var(--meat);}
@@ -171,16 +202,17 @@ button{cursor:pointer;}
 /* ============ ITEM LIST / CARD ============ */
 .item-list{padding:0 18px;display:flex;flex-direction:column;gap:10px;}
 .cat-group-title{
-  font-size:12px;font-weight:700;color:var(--ink-faint);margin:14px 4px 6px;
-  text-transform:uppercase;letter-spacing:.04em;
+  font-size:11.5px;font-weight:700;color:var(--ink-faint);margin:16px 4px 7px;
+  text-transform:uppercase;letter-spacing:.08em;
 }
 .item-card{
   background:var(--surface);border-radius:var(--radius);padding:14px 16px;
   display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
-  border-right:4px solid var(--border);
+  border-right:4px solid var(--border);transition:box-shadow .15s, transform .1s;
 }
 .item-card.read-only{cursor:default;}
 .item-card:not(.read-only){cursor:pointer;}
+.item-card:not(.read-only):active{transform:scale(0.99);box-shadow:var(--shadow-lift);}
 .item-card.cat-meat{border-right-color:var(--meat);}
 .item-card.cat-dairy{border-right-color:var(--dairy);}
 .item-card.cat-pareve{border-right-color:var(--pareve);}
@@ -296,12 +328,16 @@ button{cursor:pointer;}
 /* ============ OWNER STAT STRIP ============ */
 .stat-strip{display:flex;gap:10px;padding:14px 18px;}
 .stat-card{
-  flex:1;background:var(--surface);border-radius:14px;padding:14px 10px;text-align:center;box-shadow:var(--shadow);
+  flex:1;background:var(--surface);border-radius:14px;padding:16px 10px 14px;text-align:center;box-shadow:var(--shadow);
+  border-top:3px solid var(--border);
 }
-.stat-num{display:block;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;}
+.stat-num{display:block;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
 .stat-label{font-size:11px;color:var(--ink-soft);font-weight:600;}
+.stat-low{border-top-color:var(--danger);}
 .stat-low .stat-num{color:var(--danger);}
+.stat-high{border-top-color:var(--warn);}
 .stat-high .stat-num{color:var(--warn);}
+.stat-events{border-top-color:var(--accent);}
 .stat-events .stat-num{color:var(--accent);}
 
 /* ============ EVENTS & FORECAST ============ */
@@ -406,6 +442,7 @@ button{cursor:pointer;}
       <input id="qty-value" type="number" step="any" inputmode="decimal">
       <button id="qty-plus" class="stepper-btn" type="button">+</button>
     </div>
+    <button id="qty-add-package" class="btn-ghost full package-btn hidden" type="button"></button>
     <div class="sheet-actions">
       <button id="qty-cancel" class="btn-ghost">ביטול</button>
       <button id="qty-save" class="btn-primary">שמור מלאי</button>
@@ -491,15 +528,18 @@ button{cursor:pointer;}
         <label>מינימום<input id="ai-min" type="number" step="any" value="0" required></label>
         <label>מקסימום<input id="ai-max" type="number" step="any" value="0" required></label>
         <label>צריכה ממוצעת לאורח (לתחזית)<input id="ai-perguest" type="number" step="any" value="0"></label>
+        <label>כמות באריזה (אופציונלי)
+          <input id="ai-package" type="number" step="any" value="0" placeholder="לדוגמה: 12 יחידות בארגז, 20 ק&quot;ג בארגז">
+        </label>
         <button type="submit" class="btn-primary full">הוסף פריט</button>
       </form>
     </div>
 
     <div id="tab-import" class="tab-panel hidden">
-      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח, ברקוד (לא חובה)</code></p>
-      <p class="hint-text">לדוגמה:<br><code>חזה עוף, meat, ק"ג, 40, 15, 60, 0.25</code></p>
-      <textarea id="import-text" rows="8" placeholder='חזה עוף, meat, ק"ג, 40, 15, 60, 0.25
-יין לבן, drinks, בקבוק, 30, 10, 50, 0.15'></textarea>
+      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח, כמות באריזה (לא חובה), ברקוד (לא חובה)</code></p>
+      <p class="hint-text">לדוגמה:<br><code>חזה עוף, meat, ק"ג, 40, 15, 60, 0.25, 20</code></p>
+      <textarea id="import-text" rows="8" placeholder='חזה עוף, meat, ק"ג, 40, 15, 60, 0.25, 20
+יין לבן, drinks, בקבוק, 30, 10, 50, 0.15, 12'></textarea>
       <button id="import-btn" class="btn-primary full">ייבא פריטים</button>
     </div>
 
@@ -584,7 +624,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "1.6 - 2026-07-25";
+const APP_VERSION = "1.7 - 2026-07-25";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -670,14 +710,12 @@ function logout(){
 }
 
 /* ---------- LOGIN ---------- */
+/* ססמאות כניסה מבוטלות זמנית - לחיצה על תפקיד נכנסת ישירות.
+   כדי להחזיר את בדיקת הקוד: להחליף את הבלוק הבא בקוד המקורי
+   (שמירת pendingRole, הצגת #pin-form והתמקדות ב-#pin-input) */
 $all(".role-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>{
-    pendingRole = btn.dataset.role;
-    $("#pin-role-label").textContent = pendingRole === "warehouse" ? "קוד כניסה - מחסן" : "קוד כניסה - בעלים";
-    $("#role-select").classList.add("hidden");
-    $("#pin-form").classList.remove("hidden");
-    $("#pin-input").value = "";
-    $("#pin-input").focus();
+    setRole(btn.dataset.role);
   });
 });
 $("#pin-back").addEventListener("click", ()=>{
@@ -804,6 +842,13 @@ function openQtySheet(id){
   $("#qty-value").value = item.stock;
   $("#qty-min-label").textContent = "מינ׳ " + fmtNum(item.min);
   $("#qty-max-label").textContent = "מקס׳ " + fmtNum(item.max);
+  const pkgBtn = $("#qty-add-package");
+  if (Number(item.packageSize) > 0){
+    pkgBtn.textContent = `+ אריזה שלמה (${fmtNum(item.packageSize)} ${item.unit})`;
+    pkgBtn.classList.remove("hidden");
+  } else {
+    pkgBtn.classList.add("hidden");
+  }
   updateGaugePreview();
   $("#qty-sheet").classList.remove("hidden");
 }
@@ -830,6 +875,14 @@ $("#qty-minus").addEventListener("click", ()=>{
 $("#qty-plus").addEventListener("click", ()=>{
   $("#qty-value").value = (parseFloat($("#qty-value").value)||0) + 1;
   updateGaugePreview();
+});
+$("#qty-add-package").addEventListener("click", ()=>{
+  const item = itemsData[activeQtyItemId];
+  if (!item) return;
+  const pkg = Number(item.packageSize) || 0;
+  $("#qty-value").value = (parseFloat($("#qty-value").value)||0) + pkg;
+  updateGaugePreview();
+  showToast(`נוספה אריזה שלמה (${fmtNum(pkg)} ${item.unit})`);
 });
 $("#qty-cancel").addEventListener("click", closeQtySheet);
 $("#qty-backdrop").addEventListener("click", closeQtySheet);
@@ -1023,7 +1076,7 @@ function renderManageList(){
       row.innerHTML = `
         <div class="manage-row-info">
           <div class="manage-row-name">${escapeHtml(item.name)}</div>
-          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
+          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${item.packageSize ? " · אריזה: "+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
         </div>
         <div class="manage-row-actions">
           <button class="mini-btn edit" data-edit="${id}" title="עריכה">✎</button>
@@ -1063,6 +1116,7 @@ function editFieldsTemplate(item){
       <input class="ef-min" type="number" step="any" value="${item.min}" placeholder="מינימום">
       <input class="ef-max" type="number" step="any" value="${item.max}" placeholder="מקסימום">
       <input class="ef-perguest" type="number" step="any" value="${item.perGuest||0}" placeholder="צריכה לאורח">
+      <input class="ef-package full-span" type="number" step="any" value="${item.packageSize||0}" placeholder="כמות באריזה (אופציונלי)">
       <div class="field-with-scan full-span">
         <input class="ef-barcode" value="${escapeAttr(item.barcode||'')}" placeholder="ברקוד">
         <button type="button" class="scan-btn paste-btn ef-paste-btn" title="הדבקה מהלוח">📋</button>
@@ -1099,6 +1153,7 @@ function wireEditRow(row, id){
       min: parseFloat(row.querySelector(".ef-min").value)||0,
       max: parseFloat(row.querySelector(".ef-max").value)||0,
       perGuest: parseFloat(row.querySelector(".ef-perguest").value)||0,
+      packageSize: parseFloat(row.querySelector(".ef-package").value)||0,
       barcode: row.querySelector(".ef-barcode").value.trim()
     };
     if (!updated.name){ showToast("יש להזין שם", true); return; }
@@ -1133,6 +1188,7 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     min: parseFloat($("#ai-min").value)||0,
     max: parseFloat($("#ai-max").value)||0,
     perGuest: parseFloat($("#ai-perguest").value)||0,
+    packageSize: parseFloat($("#ai-package").value)||0,
     barcode: $("#ai-barcode").value.trim()
   };
   if (!item.name || !item.unit){ showToast("יש למלא שם ולבחור/להזין יחידה", true); return; }
@@ -1140,7 +1196,7 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     showToast("הפריט נוסף בהצלחה");
     e.target.reset();
     $("#ai-unit-custom").classList.add("hidden");
-    $("#ai-stock").value = 0; $("#ai-min").value = 0; $("#ai-max").value = 0; $("#ai-perguest").value = 0;
+    $("#ai-stock").value = 0; $("#ai-min").value = 0; $("#ai-max").value = 0; $("#ai-perguest").value = 0; $("#ai-package").value = 0;
   });
 });
 
@@ -1201,7 +1257,7 @@ $("#import-btn").addEventListener("click", ()=>{
   lines.forEach(line=>{
     const parts = line.split(",").map(p=>p.trim());
     if (parts.length < 6){ errors++; return; }
-    const [name, category, unit, stock, min, max, perGuest, barcode] = parts;
+    const [name, category, unit, stock, min, max, perGuest, packageSize, barcode] = parts;
     if (!CATEGORY_LABELS[category]){ errors++; return; }
     const docRef = db.collection("items").doc();
     batch.set(docRef, {
@@ -1210,6 +1266,7 @@ $("#import-btn").addEventListener("click", ()=>{
       min: parseFloat(min)||0,
       max: parseFloat(max)||0,
       perGuest: parseFloat(perGuest)||0,
+      packageSize: parseFloat(packageSize)||0,
       barcode: (barcode||"").trim()
     });
     count++;
