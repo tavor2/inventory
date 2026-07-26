@@ -378,6 +378,9 @@ button{cursor:pointer;}
 /* ============ EVENTS & FORECAST ============ */
 .section-block{padding:0 18px;margin-bottom:26px;}
 .section-title{font-size:15px;font-weight:800;margin:0 0 12px;}
+.section-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.section-title-row .section-title{margin:0;}
+.section-title-row .btn-primary{padding:10px 16px;font-size:13.5px;flex:none;}
 .events-list{display:flex;flex-direction:column;gap:8px;}
 .event-row{
   background:var(--surface);border-radius:12px;padding:12px 14px;display:flex;align-items:center;
@@ -416,13 +419,13 @@ button{cursor:pointer;}
     </div>
 
     <div class="role-select" id="role-select">
-      <button class="role-btn" data-role="warehouse">
-        <span class="role-icon">▤</span>
-        <span>כניסת מחסן</span>
-      </button>
       <button class="role-btn" data-role="owner">
         <span class="role-icon">◈</span>
-        <span>כניסת בעלים</span>
+        <span>ניהול אירועים</span>
+      </button>
+      <button class="role-btn" data-role="warehouse">
+        <span class="role-icon">▤</span>
+        <span>ניהול מחסן</span>
       </button>
     </div>
 
@@ -645,34 +648,21 @@ button{cursor:pointer;}
   </div>
 
   <div class="owner-tabs">
-    <button class="tab-btn active" data-owner-tab="status">סטטוס מלאי</button>
-    <button class="tab-btn" data-owner-tab="events">אירועים ותחזית</button>
+    <button class="tab-btn active" data-owner-tab="events">אירועים ותחזית</button>
+    <button class="tab-btn" data-owner-tab="status">סטטוס מלאי</button>
   </div>
 
-  <div id="owner-status-panel" class="tab-panel">
+  <div id="owner-status-panel" class="tab-panel hidden">
     <div class="search-bar"><input id="ow-search" type="search" placeholder="חיפוש מוצר..."></div>
     <div id="owner-status-list" class="item-list read-only"></div>
   </div>
 
-  <div id="owner-events-panel" class="tab-panel hidden">
+  <div id="owner-events-panel" class="tab-panel">
     <div class="section-block">
-      <h3 class="section-title">הוספת אירוע</h3>
-      <form id="add-event-form" class="form-grid">
-        <label>שם האירוע<input id="ev-name" type="text" required></label>
-        <label>סוג האירוע
-          <select id="ev-category" required>
-            <option value="meat">בשרי</option>
-            <option value="dairy">חלבי</option>
-          </select>
-        </label>
-        <label>תאריך<input id="ev-date" type="date" required></label>
-        <label>מספר אורחים<input id="ev-guests" type="number" min="1" required></label>
-        <button type="submit" class="btn-primary full">הוסף אירוע</button>
-      </form>
-    </div>
-
-    <div class="section-block">
-      <h3 class="section-title">אירועים קרובים</h3>
+      <div class="section-title-row">
+        <h3 class="section-title">אירועים קרובים</h3>
+        <button id="open-add-event-btn" class="btn-primary" type="button">+ הוסף אירוע</button>
+      </div>
       <div id="events-list" class="events-list"></div>
       <p id="events-empty" class="empty-state hidden">אין אירועים קרובים במערכת.</p>
     </div>
@@ -692,6 +682,30 @@ button{cursor:pointer;}
     </div>
   </div>
 </section>
+
+<!-- Add event sheet -->
+<div id="add-event-sheet" class="sheet hidden">
+  <div class="sheet-backdrop" id="add-event-backdrop"></div>
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <h3>הוספת אירוע</h3>
+    <form id="add-event-form" class="form-grid">
+      <label>שם האירוע<input id="ev-name" type="text" required></label>
+      <label>סוג האירוע
+        <select id="ev-category" required>
+          <option value="meat">בשרי</option>
+          <option value="dairy">חלבי</option>
+        </select>
+      </label>
+      <label>תאריך<input id="ev-date" type="date" required></label>
+      <label>מספר אורחים<input id="ev-guests" type="number" min="1" required></label>
+      <div class="sheet-actions">
+        <button type="button" id="add-event-cancel" class="btn-ghost">ביטול</button>
+        <button type="submit" class="btn-primary">הוסף אירוע</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -719,7 +733,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "2.8 - 2026-07-26";
+const APP_VERSION = "3.0 - 2026-07-26";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -807,8 +821,14 @@ function setRole(role){
     renderWarehouseList();
   } else if (role === "owner"){
     showScreen("screen-owner");
+    resetOwnerTabsToDefault();
     renderOwnerAll();
   }
+}
+function resetOwnerTabsToDefault(){
+  $all(".owner-tabs .tab-btn").forEach(b=> b.classList.toggle("active", b.dataset.ownerTab === "events"));
+  $("#owner-events-panel").classList.remove("hidden");
+  $("#owner-status-panel").classList.add("hidden");
 }
 
 function logout(){
@@ -1581,6 +1601,19 @@ $all(".owner-tabs .tab-btn").forEach(btn=>{
 });
 
 /* ---------- OWNER: EVENTS ---------- */
+function openAddEventSheet(){
+  $("#add-event-sheet").classList.remove("hidden");
+  $("#ev-name").focus();
+}
+function closeAddEventSheet(){
+  $("#add-event-sheet").classList.add("hidden");
+  $("#add-event-form").reset();
+  $("#ev-category").value = "meat";
+}
+$("#open-add-event-btn").addEventListener("click", openAddEventSheet);
+$("#add-event-cancel").addEventListener("click", closeAddEventSheet);
+$("#add-event-backdrop").addEventListener("click", closeAddEventSheet);
+
 $("#add-event-form").addEventListener("submit", (e)=>{
   e.preventDefault();
   const ev = {
@@ -1592,8 +1625,7 @@ $("#add-event-form").addEventListener("submit", (e)=>{
   if (!ev.name || !ev.category || !ev.date || !ev.guests){ showToast("יש למלא את כל השדות", true); return; }
   db.collection("events").add(ev).then(()=>{
     showToast("האירוע נוסף");
-    e.target.reset();
-    $("#ev-category").value = "meat";
+    closeAddEventSheet();
   });
 });
 
