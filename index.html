@@ -149,6 +149,13 @@ button{cursor:pointer;}
   border-radius:9px;border:1.5px solid var(--border);background:var(--surface);
 }
 .package-row-controls .btn-primary{flex:1;padding:10px 12px;font-size:13.5px;}
+.package-convert{display:flex;align-items:center;gap:8px;margin:-6px 0 2px;padding:0 2px;}
+.package-convert-label{font-size:11.5px;color:var(--ink-faint);flex:none;}
+.package-convert input{
+  width:60px;flex:none;text-align:center;font-size:13px;padding:6px 4px;
+  border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--ink);
+}
+.package-convert-hint{font-size:11.5px;color:var(--brass-dark);font-weight:600;}
 .package-btn:hover{border-color:var(--brass-dark);background:var(--brass-tint);}
 
 /* ============ TOPBAR ============ */
@@ -374,6 +381,9 @@ button{cursor:pointer;}
 }
 .event-row-info{flex:1;}
 .event-row-name{font-weight:700;font-size:14px;}
+.event-cat-tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;vertical-align:middle;}
+.event-cat-tag.cat-meat{background:rgba(181,72,42,0.12);color:var(--meat);}
+.event-cat-tag.cat-dairy{background:rgba(58,110,165,0.12);color:var(--dairy);}
 .event-row-meta{font-size:12px;color:var(--ink-soft);}
 .forecast-list{display:flex;flex-direction:column;gap:8px;}
 .forecast-row{
@@ -581,8 +591,23 @@ button{cursor:pointer;}
         </label>
         <p id="ai-package-calc" class="hint-text hidden"></p>
         <label>מלאי התחלתי<input id="ai-stock" type="number" step="1" inputmode="numeric" value="0" required></label>
+        <div id="ai-stock-pkg-row" class="package-convert hidden">
+          <span class="package-convert-label">או לפי מארזים:</span>
+          <input id="ai-stock-pkg" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+          <span id="ai-stock-pkg-hint" class="package-convert-hint hidden"></span>
+        </div>
         <label>מינימום<input id="ai-min" type="number" step="1" inputmode="numeric" value="0" required></label>
+        <div id="ai-min-pkg-row" class="package-convert hidden">
+          <span class="package-convert-label">או לפי מארזים:</span>
+          <input id="ai-min-pkg" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+          <span id="ai-min-pkg-hint" class="package-convert-hint hidden"></span>
+        </div>
         <label>מקסימום<input id="ai-max" type="number" step="1" inputmode="numeric" value="0" required></label>
+        <div id="ai-max-pkg-row" class="package-convert hidden">
+          <span class="package-convert-label">או לפי מארזים:</span>
+          <input id="ai-max-pkg" type="number" min="0" step="1" inputmode="numeric" placeholder="0">
+          <span id="ai-max-pkg-hint" class="package-convert-hint hidden"></span>
+        </div>
         <label>צריכה ממוצעת לאורח (לתחזית)<input id="ai-perguest" type="number" step="any" value="0"></label>
         <button type="submit" class="btn-primary full">הוסף פריט</button>
       </form>
@@ -630,6 +655,12 @@ button{cursor:pointer;}
       <h3 class="section-title">הוספת אירוע</h3>
       <form id="add-event-form" class="form-grid">
         <label>שם האירוע<input id="ev-name" type="text" required></label>
+        <label>סוג האירוע
+          <select id="ev-category" required>
+            <option value="meat">בשרי</option>
+            <option value="dairy">חלבי</option>
+          </select>
+        </label>
         <label>תאריך<input id="ev-date" type="date" required></label>
         <label>מספר אורחים<input id="ev-guests" type="number" min="1" required></label>
         <button type="submit" class="btn-primary full">הוסף אירוע</button>
@@ -643,10 +674,17 @@ button{cursor:pointer;}
     </div>
 
     <div class="section-block">
-      <h3 class="section-title">תחזית מלאי לאירועים קרובים</h3>
-      <p class="hint-text">כמות נדרשת מחושבת לפי סה"כ אורחים באירועים הקרובים, כפול צריכה ממוצעת לאורח שהוגדרה לכל פריט.</p>
-      <div id="forecast-list" class="forecast-list"></div>
-      <p id="forecast-empty" class="empty-state hidden">אין מספיק נתונים לתחזית. יש להגדיר "צריכה לאורח" לפריטים ולהוסיף אירועים.</p>
+      <h3 class="section-title">תחזית לשבוע הנוכחי</h3>
+      <p class="hint-text">כמות נדרשת מחושבת לפי אורחי האירועים בשבעת הימים הקרובים, כפול צריכה לאורח - ומוצגים רק פריטים רלוונטיים לסוג האירוע (בשרי/חלבי), בנוסף לפריטי פרווה ושתייה שרלוונטיים לכל אירוע.</p>
+      <div id="forecast-list-this" class="forecast-list"></div>
+      <p id="forecast-empty-this" class="empty-state hidden">אין אירועים בשבוע הקרוב, או שאין פריטים עם "צריכה לאורח" מוגדרת.</p>
+    </div>
+
+    <div class="section-block">
+      <h3 class="section-title">תחזית לשבוע הבא</h3>
+      <p class="hint-text">מחושב באותו אופן, אבל לוקח בחשבון שהמלאי כבר ירד בעקבות אירועי השבוע הנוכחי - כך שהתחזית משקפת מה שבאמת יישאר במלאי כשהשבוע הבא יגיע.</p>
+      <div id="forecast-list-next" class="forecast-list"></div>
+      <p id="forecast-empty-next" class="empty-state hidden">אין אירועים בשבוע הבא, או שאין פריטים עם "צריכה לאורח" מוגדרת.</p>
     </div>
   </div>
 </section>
@@ -677,7 +715,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "2.5 - 2026-07-25";
+const APP_VERSION = "2.7 - 2026-07-25";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -1352,20 +1390,47 @@ $("#ai-package-label-select").addEventListener("change", ()=>{
   $("#ai-package-label-custom").classList.toggle("hidden", !isCustom);
   if (isCustom) $("#ai-package-label-custom").focus();
 });
+function currentAddPackageSize(){
+  const unit = getSelectedUnit() || "";
+  const pkgUnits = parseFloat($("#ai-package-units").value) || 0;
+  const pkgUnitAmount = parseFloat($("#ai-package-unit-amount").value) || 0;
+  return roundForUnit(pkgUnits * pkgUnitAmount, unit);
+}
 function updateAddPackageCalc(){
   const unit = getSelectedUnit() || "יחידת מידה";
   $all(".ai-package-unit-label").forEach(el=> el.textContent = unit);
   const pkgUnits = parseFloat($("#ai-package-units").value) || 0;
   const pkgUnitAmount = parseFloat($("#ai-package-unit-amount").value) || 0;
   const calcEl = $("#ai-package-calc");
+  const pkgSize = roundForUnit(pkgUnits * pkgUnitAmount, unit);
   if (pkgUnits > 0){
-    const total = roundForUnit(pkgUnits * pkgUnitAmount, unit);
-    calcEl.textContent = `= ${fmtNum(pkgUnits)} × ${fmtNum(pkgUnitAmount)} = ${fmtNum(total)} ${unit} בכל אריזה`;
+    calcEl.textContent = `= ${fmtNum(pkgUnits)} × ${fmtNum(pkgUnitAmount)} = ${fmtNum(pkgSize)} ${unit} בכל אריזה`;
     calcEl.classList.remove("hidden");
   } else {
     calcEl.classList.add("hidden");
   }
+  ["stock","min","max"].forEach(key=>{
+    $(`#ai-${key}-pkg-row`).classList.toggle("hidden", !(pkgSize > 0));
+  });
 }
+function wireAddPackageConverter(key){
+  const mainEl = $(`#ai-${key}`), pkgEl = $(`#ai-${key}-pkg`), hintEl = $(`#ai-${key}-pkg-hint`);
+  pkgEl.addEventListener("input", ()=>{
+    const unit = getSelectedUnit() || "";
+    const pkgSize = currentAddPackageSize();
+    const count = parseFloat(pkgEl.value) || 0;
+    if (pkgSize > 0 && count > 0){
+      const total = roundForUnit(count * pkgSize, unit);
+      mainEl.value = total;
+      hintEl.textContent = `= ${fmtNum(total)} ${unit}`;
+      hintEl.classList.remove("hidden");
+    } else {
+      hintEl.classList.add("hidden");
+    }
+  });
+  stripDecimalLive(pkgEl);
+}
+["stock","min","max"].forEach(wireAddPackageConverter);
 $("#ai-unit-select").addEventListener("change", ()=>{
   const isCustom = $("#ai-unit-select").value === "__custom__";
   $("#ai-unit-custom").classList.toggle("hidden", !isCustom);
@@ -1404,6 +1469,10 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     $("#ai-stock").value = 0; $("#ai-min").value = 0; $("#ai-max").value = 0; $("#ai-perguest").value = 0;
     $("#ai-package-units").value = 0; $("#ai-package-unit-amount").value = 1;
     $("#ai-package-label-custom").classList.add("hidden");
+    ["stock","min","max"].forEach(key=>{
+      $(`#ai-${key}-pkg`).value = "";
+      $(`#ai-${key}-pkg-hint`).classList.add("hidden");
+    });
     updateAddPackageCalc();
   });
 });
@@ -1512,13 +1581,15 @@ $("#add-event-form").addEventListener("submit", (e)=>{
   e.preventDefault();
   const ev = {
     name: $("#ev-name").value.trim(),
+    category: $("#ev-category").value,
     date: $("#ev-date").value,
     guests: parseInt($("#ev-guests").value, 10) || 0
   };
-  if (!ev.name || !ev.date || !ev.guests){ showToast("יש למלא את כל השדות", true); return; }
+  if (!ev.name || !ev.category || !ev.date || !ev.guests){ showToast("יש למלא את כל השדות", true); return; }
   db.collection("events").add(ev).then(()=>{
     showToast("האירוע נוסף");
     e.target.reset();
+    $("#ev-category").value = "meat";
   });
 });
 
@@ -1546,9 +1617,10 @@ function renderEventsList(){
         wireEventEditRow(row, id);
       } else {
         const dateStr = new Date(ev.date).toLocaleDateString("he-IL", {day:"numeric", month:"short", year:"numeric"});
+        const catLabel = CATEGORY_LABELS[ev.category] || "";
         row.innerHTML = `
           <div class="event-row-info">
-            <div class="event-row-name">${escapeHtml(ev.name)}</div>
+            <div class="event-row-name">${escapeHtml(ev.name)}${catLabel ? ` <span class="event-cat-tag cat-${ev.category}">${catLabel}</span>` : ""}</div>
             <div class="event-row-meta">${dateStr} · ${ev.guests} אורחים</div>
           </div>
           <div class="manage-row-actions">
@@ -1571,6 +1643,12 @@ function eventEditFieldsTemplate(ev){
   return `
     <div class="edit-fields">
       <label class="full-span">שם האירוע<input class="eev-name" value="${escapeAttr(ev.name)}" placeholder="שם האירוע"></label>
+      <label>סוג האירוע
+        <select class="eev-category">
+          <option value="meat" ${ev.category==="meat"?"selected":""}>בשרי</option>
+          <option value="dairy" ${ev.category==="dairy"?"selected":""}>חלבי</option>
+        </select>
+      </label>
       <label>תאריך<input class="eev-date" type="date" value="${escapeAttr(ev.date)}"></label>
       <label>מספר אורחים<input class="eev-guests" type="number" min="1" step="1" inputmode="numeric" value="${ev.guests}" placeholder="מספר אורחים"></label>
       <div class="full-span" style="display:flex;gap:8px;">
@@ -1585,10 +1663,11 @@ function wireEventEditRow(row, id){
   row.querySelector(".eev-save").addEventListener("click", ()=>{
     const updated = {
       name: row.querySelector(".eev-name").value.trim(),
+      category: row.querySelector(".eev-category").value,
       date: row.querySelector(".eev-date").value,
       guests: parseInt(row.querySelector(".eev-guests").value, 10) || 0
     };
-    if (!updated.name || !updated.date || !updated.guests){ showToast("יש למלא את כל השדות", true); return; }
+    if (!updated.name || !updated.category || !updated.date || !updated.guests){ showToast("יש למלא את כל השדות", true); return; }
     db.collection("events").doc(id).update(updated).then(()=>{
       showToast("האירוע עודכן");
       editingEventId = null;
@@ -1598,39 +1677,72 @@ function wireEventEditRow(row, id){
 }
 
 /* ---------- OWNER: FORECAST ---------- */
-function renderForecast(){
-  const container = $("#forecast-list");
-  const upcoming = getUpcomingEvents();
-  const totalGuests = upcoming.reduce((sum,[id,ev])=> sum + (Number(ev.guests)||0), 0);
+function getEventsInRange(startDate, endDateExclusive){
+  return Object.entries(eventsData)
+    .filter(([id,ev])=>{
+      const d = new Date(ev.date);
+      return d >= startDate && d < endDateExclusive;
+    })
+    .sort((a,b)=> new Date(a[1].date) - new Date(b[1].date));
+}
+/* פריטי פרווה ושתייה רלוונטיים לכל אירוע (בשרי או חלבי כאחד) - פריטי בשרי/חלבי רלוונטיים רק לאירוע מאותו סוג */
+function categoryAppliesToEvent(itemCategory, eventCategory){
+  if (!eventCategory) return true; // אירועים ישנים בלי סוג מוגדר - נחשבים רלוונטיים לכל הפריטים
+  if (itemCategory === "pareve" || itemCategory === "drinks") return true;
+  return itemCategory === eventCategory;
+}
+function neededForEvents(events, itemCategory, perGuest){
+  const guests = events.reduce((sum,[id,ev])=> categoryAppliesToEvent(itemCategory, ev.category) ? sum + (Number(ev.guests)||0) : sum, 0);
+  return guests * Number(perGuest||0);
+}
+function renderForecastList(containerId, emptyId, rows){
+  const container = $(containerId);
   container.innerHTML = "";
-
-  const relevant = Object.entries(itemsData).filter(([id,it])=> Number(it.perGuest) > 0);
-
-  if (upcoming.length === 0 || relevant.length === 0){
-    $("#forecast-empty").classList.remove("hidden");
+  if (rows.length === 0){
+    $(emptyId).classList.remove("hidden");
     return;
   }
-  $("#forecast-empty").classList.add("hidden");
-
-  relevant
-    .map(([id,it])=>{
-      const needed = totalGuests * Number(it.perGuest);
-      const short = needed > Number(it.stock);
-      return {id, it, needed, short};
-    })
+  $(emptyId).classList.add("hidden");
+  rows
     .sort((a,b)=> (b.short - a.short) || (b.needed - a.needed))
-    .forEach(({id, it, needed, short})=>{
+    .forEach(({it, needed, available, short})=>{
       const row = document.createElement("div");
       row.className = "forecast-row" + (short ? " short" : "");
       row.innerHTML = `
         <div>
           <div class="forecast-row-name">${escapeHtml(it.name)}</div>
-          <div class="forecast-row-detail">נדרש ${fmtNum(needed)} ${escapeHtml(it.unit)} · במלאי ${fmtNum(it.stock)}</div>
+          <div class="forecast-row-detail">נדרש ${fmtNum(needed)} ${escapeHtml(it.unit)} · צפוי במלאי ${fmtNum(available)}</div>
         </div>
-        <span class="forecast-badge ${short?'short':'ok'}">${short ? `חסר ${fmtNum(needed-it.stock)}` : "מספיק"}</span>
+        <span class="forecast-badge ${short?'short':'ok'}">${short ? `חסר ${fmtNum(needed-available)}` : "מספיק"}</span>
       `;
       container.appendChild(row);
     });
+}
+function renderForecast(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekEnd1 = new Date(today); weekEnd1.setDate(weekEnd1.getDate()+7);
+  const weekEnd2 = new Date(today); weekEnd2.setDate(weekEnd2.getDate()+14);
+  const thisWeekEvents = getEventsInRange(today, weekEnd1);
+  const nextWeekEvents = getEventsInRange(weekEnd1, weekEnd2);
+
+  const relevant = Object.entries(itemsData).filter(([id,it])=> Number(it.perGuest) > 0);
+
+  const rowsThis = [];
+  const rowsNext = [];
+  relevant.forEach(([id,it])=>{
+    const neededThis = neededForEvents(thisWeekEvents, it.category, it.perGuest);
+    const neededNext = neededForEvents(nextWeekEvents, it.category, it.perGuest);
+    const stockAfterThis = Number(it.stock) - neededThis;
+    if (neededThis > 0){
+      rowsThis.push({it, needed: neededThis, available: Number(it.stock), short: neededThis > Number(it.stock)});
+    }
+    if (neededNext > 0){
+      rowsNext.push({it, needed: neededNext, available: stockAfterThis, short: neededNext > stockAfterThis});
+    }
+  });
+
+  renderForecastList("#forecast-list-this", "#forecast-empty-this", rowsThis);
+  renderForecastList("#forecast-list-next", "#forecast-empty-next", rowsNext);
 }
 
 /* ---------- OWNER: STAT STRIP ---------- */
