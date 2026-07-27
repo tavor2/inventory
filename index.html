@@ -270,6 +270,7 @@ button{cursor:pointer;}
 #scan-sheet .sheet-handle{margin-bottom:8px;}
 #scan-sheet h3{font-size:15px;margin-bottom:2px;}
 #scan-sheet .scan-hint{margin:2px 0 8px;font-size:11.5px;line-height:1.4;}
+#scan-sheet .scan-capture-btn{margin:4px 0 2px;}
 #scan-sheet .scan-status{margin-top:4px;min-height:16px;font-size:12px;}
 #scan-sheet .scan-confirm{margin-top:10px;}
 #scan-sheet .scan-confirm-note{margin:0 0 10px;}
@@ -507,8 +508,10 @@ button{cursor:pointer;}
   <div class="sheet-panel">
     <div class="sheet-handle"></div>
     <h3>סריקת ברקוד</h3>
-    <p class="scan-hint">כוונו את המצלמה אל הברקוד שעל המוצר, מרחק של כ-10 ס"מ, בתאורה טובה</p>
-    <div id="scanner-region"></div>
+    <p class="scan-hint">צלמו תמונה ברורה של הברקוד, ממרחק של כ-10 ס"מ, בתאורה טובה</p>
+    <div id="scanner-region" class="hidden"></div>
+    <button id="scan-capture-btn" class="btn-primary full scan-capture-btn" type="button">📷 צלם ברקוד לסריקה</button>
+    <input type="file" id="scan-file-input" accept="image/*" capture="environment" class="hidden">
     <p id="scan-status" class="scan-status"></p>
 
     <div id="scan-confirm" class="scan-confirm hidden">
@@ -516,7 +519,7 @@ button{cursor:pointer;}
       <p class="scan-confirm-value" id="scan-confirm-value"></p>
       <p class="scan-confirm-note">ודאו שהמספר תואם למה שמודפס על המוצר</p>
       <div class="sheet-actions">
-        <button id="scan-retry" class="btn-ghost">סרוק שוב</button>
+        <button id="scan-retry" class="btn-ghost">צלם שוב</button>
         <button id="scan-confirm-btn" class="btn-primary">זה נכון, אישור</button>
       </div>
     </div>
@@ -733,7 +736,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.1 - 2026-07-26";
+const APP_VERSION = "3.2 - 2026-07-27";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -1085,85 +1088,89 @@ function isValidChecksum(code){
   return calc === checkDigit;
 }
 
+/* גישת "צילום תמונה" (input file + capture=environment) במקום וידאו חי:
+   פותח ישירות את אפליקציית המצלמה של הטלפון לצילום התמונה, ואז מפענחים אותה
+   עם html5QrCode.scanFile. יציב יותר בדפדפנים ניידים מאשר סטרימינג חי של וידאו. */
+function ensureQrCodeInstance(){
+  if (!html5QrCodeInstance){
+    html5QrCodeInstance = new Html5Qrcode("scanner-region", {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.ITF, Html5QrcodeSupportedFormats.CODABAR,
+        Html5QrcodeSupportedFormats.QR_CODE
+      ],
+      verbose: false
+    });
+  }
+  return html5QrCodeInstance;
+}
+
 function openScanner(onResult){
   scanResultCallback = onResult;
   pendingScanCode = null;
   $("#scan-status").textContent = "";
   $("#scan-confirm").classList.add("hidden");
   $("#scan-cancel-wrap").classList.remove("hidden");
+  $("#scan-capture-btn").classList.remove("hidden");
   $("#scan-sheet").classList.remove("hidden");
 
   if (typeof Html5Qrcode === "undefined"){
     $("#scan-status").textContent = "⚠ ספריית הסריקה לא נטענה. בדקו את החיבור לאינטרנט.";
+    $("#scan-capture-btn").classList.add("hidden");
     return;
   }
+  // פותחים ישר את המצלמה לצילום, בלי צורך בלחיצה נוספת
+  triggerPhotoCapture();
+}
 
-  html5QrCodeInstance = new Html5Qrcode("scanner-region", {
-    formatsToSupport: [
-      Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
-      Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
-      Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
-      Html5QrcodeSupportedFormats.ITF, Html5QrcodeSupportedFormats.CODABAR,
-      Html5QrcodeSupportedFormats.QR_CODE
-    ],
-    verbose: false
-  });
+function triggerPhotoCapture(){
+  $("#scan-status").textContent = "";
+  const fileInput = $("#scan-file-input");
+  fileInput.value = "";
+  fileInput.click();
+}
 
-  function onDecoded(decodedText){
-    if (pendingScanCode) return; // כבר יש מועמד ממתין לאישור
-    if (!isValidChecksum(decodedText)){
-      $("#scan-status").textContent = "קריאה לא ברורה, ממשיך לסרוק...";
-      return;
-    }
-    pendingScanCode = decodedText;
-    if (html5QrCodeInstance) html5QrCodeInstance.pause(true);
-    $("#scan-status").textContent = "";
-    $("#scan-confirm-value").textContent = decodedText;
-    $("#scan-confirm").classList.remove("hidden");
-    $("#scan-cancel-wrap").classList.add("hidden");
-  }
-  function onFrameFail(){ /* per-frame scan failure, ignore */ }
-
-  html5QrCodeInstance.start(
-    { facingMode: "environment" },
-    {
-      fps: 8,
-      qrbox: { width: 300, height: 130 },
-      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-      videoConstraints: {
-        facingMode: "environment",
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
+function decodeScannedImage(file){
+  $("#scan-status").textContent = "מפענח תמונה...";
+  $("#scan-capture-btn").classList.add("hidden");
+  const qr = ensureQrCodeInstance();
+  qr.scanFile(file, false)
+    .then(decodedText=>{
+      const code = (decodedText||"").trim();
+      if (!isValidChecksum(code)){
+        $("#scan-status").textContent = "קריאה לא ברורה, נסו לצלם שוב מקרוב ובתאורה טובה.";
+        $("#scan-capture-btn").classList.remove("hidden");
+        return;
       }
-    },
-    onDecoded,
-    onFrameFail
-  ).catch(err=>{
-    console.error("scan start (advanced) failed, retrying with basic settings", err);
-    html5QrCodeInstance.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 260, height: 160 } },
-      onDecoded,
-      onFrameFail
-    ).catch(err2=>{
-      console.error(err2);
-      $("#scan-status").textContent = "⚠ לא ניתן לגשת למצלמה. ודאו שנתתם הרשאת מצלמה לדפדפן.";
+      pendingScanCode = code;
+      $("#scan-status").textContent = "";
+      $("#scan-confirm-value").textContent = code;
+      $("#scan-confirm").classList.remove("hidden");
+      $("#scan-cancel-wrap").classList.add("hidden");
+      if (navigator.vibrate) navigator.vibrate(100);
+    })
+    .catch(()=>{
+      $("#scan-status").textContent = "ברקוד לא זוהה בתמונה. נסו לצלם שוב ממרחק קרוב יותר ובתאורה טובה.";
+      $("#scan-capture-btn").classList.remove("hidden");
     });
-  });
 }
 
 function closeScanner(){
   $("#scan-sheet").classList.add("hidden");
   $("#scan-confirm").classList.add("hidden");
+  $("#scan-status").textContent = "";
   pendingScanCode = null;
-  if (html5QrCodeInstance){
-    html5QrCodeInstance.stop().then(()=>{
-      html5QrCodeInstance.clear();
-      html5QrCodeInstance = null;
-    }).catch(()=>{ html5QrCodeInstance = null; });
-  }
   scanResultCallback = null;
 }
+
+$("#scan-capture-btn").addEventListener("click", triggerPhotoCapture);
+$("#scan-file-input").addEventListener("change", (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  decodeScannedImage(file);
+});
 
 $("#scan-cancel").addEventListener("click", closeScanner);
 $("#scan-backdrop").addEventListener("click", closeScanner);
@@ -1173,7 +1180,7 @@ $("#scan-retry").addEventListener("click", ()=>{
   $("#scan-confirm").classList.add("hidden");
   $("#scan-cancel-wrap").classList.remove("hidden");
   $("#scan-status").textContent = "";
-  if (html5QrCodeInstance) html5QrCodeInstance.resume();
+  triggerPhotoCapture();
 });
 
 $("#scan-confirm-btn").addEventListener("click", ()=>{
