@@ -142,15 +142,14 @@ button{cursor:pointer;}
 .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
 .full{width:100%;}
 .icon-btn{
-  background:#fff;border:none;height:38px;box-sizing:border-box;
-  padding:0 14px;border-radius:999px;font-size:13.5px;font-weight:700;color:var(--accent-dark);
+  background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.4);height:38px;box-sizing:border-box;
+  padding:0 14px;border-radius:999px;font-size:13.5px;font-weight:700;color:#fff;
   display:inline-flex;align-items:center;gap:6px;line-height:1;
-  box-shadow:0 4px 12px rgba(9,26,64,0.22);transition:transform .12s, box-shadow .12s;
+  transition:background .15s, border-color .15s;
 }
 .icon-btn .btn-emoji{font-size:15px;line-height:1;display:inline-flex;}
 .icon-btn span{font-size:13px;line-height:1;}
-.icon-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(9,26,64,0.28);}
-.icon-btn.icon-logout{color:var(--danger);}
+.icon-btn:hover{background:rgba(255,255,255,0.28);border-color:#fff;}
 .package-row{
   border:1.5px solid var(--brass);background:var(--brass-tint);border-radius:12px;
   padding:12px 14px;margin-bottom:14px;
@@ -177,7 +176,7 @@ button{cursor:pointer;}
   position:sticky;top:0;z-index:20;
   background:linear-gradient(165deg,#2E76E8 0%,#1C5FD1 55%,#123C89 100%);
   display:flex;align-items:center;justify-content:space-between;
-  padding:16px 18px 22px;border-radius:0 0 20px 20px;
+  padding:16px 18px 14px;border-radius:0 0 18px 18px;
   box-shadow:0 10px 24px rgba(9,26,64,0.2);
 }
 .topbar-title{display:flex;align-items:center;font-weight:800;font-size:16.5px;letter-spacing:-0.01em;color:#fff;}
@@ -367,19 +366,25 @@ button{cursor:pointer;}
 .edit-fields .full-span{grid-column:1/-1;}
 
 /* ============ OWNER STAT STRIP ============ */
-.stat-strip{display:flex;gap:10px;padding:14px 18px 14px;margin-top:-14px;position:relative;z-index:5;}
+.stat-strip{display:flex;gap:10px;padding:18px 18px 14px;}
 .stat-card{
   flex:1;background:var(--surface);border-radius:14px;padding:16px 10px 14px;text-align:center;box-shadow:var(--shadow-lift);
   border-top:3px solid var(--border);
 }
-.stat-icon{display:block;font-size:18px;margin-bottom:2px;}
+.stat-icon{
+  display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;
+  margin:0 auto 8px;font-size:16px;font-weight:800;color:#fff;background:var(--ink-faint);
+}
 .stat-num{display:block;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
 .stat-label{font-size:11px;color:var(--ink-soft);font-weight:600;}
 .stat-low{border-top-color:var(--danger);}
+.stat-low .stat-icon{background:var(--danger);}
 .stat-low .stat-num{color:var(--danger);}
-.stat-high{border-top-color:var(--warn);}
-.stat-high .stat-num{color:var(--warn);}
+.stat-high{border-top-color:var(--good);}
+.stat-high .stat-icon{background:var(--good);}
+.stat-high .stat-num{color:var(--good);}
 .stat-events{border-top-color:var(--accent);}
+.stat-events .stat-icon{background:var(--accent);}
 .stat-events .stat-num{color:var(--accent);}
 
 /* ============ EVENTS & FORECAST ============ */
@@ -455,7 +460,7 @@ button{cursor:pointer;}
   <header class="topbar">
     <div class="topbar-title"><span class="brand-dot small"></span><span>מסך מחסן</span></div>
     <div class="topbar-actions">
-      <button id="wh-manage-btn" class="icon-btn" title="ניהול פריטים"><span class="btn-emoji">🧰</span><span>פריטים</span></button>
+      <button id="wh-manage-btn" class="icon-btn" title="ניהול פריטים"><span class="btn-emoji">🛠️</span><span>פריטים</span></button>
       <button id="wh-logout-btn" class="icon-btn icon-logout" title="יציאה"><span class="btn-emoji">🚪</span><span>יציאה</span></button>
     </div>
   </header>
@@ -641,9 +646,9 @@ button{cursor:pointer;}
   </header>
 
   <div class="stat-strip">
-    <div class="stat-card stat-low"><span class="stat-icon">⚠️</span><span id="stat-low-count" class="stat-num">0</span><span class="stat-label">מתחת למינימום</span></div>
-    <div class="stat-card stat-high"><span class="stat-icon">📈</span><span id="stat-high-count" class="stat-num">0</span><span class="stat-label">מעל מקסימום</span></div>
-    <div class="stat-card stat-events"><span class="stat-icon">📅</span><span id="stat-events-count" class="stat-num">0</span><span class="stat-label">אירועים קרובים</span></div>
+    <div class="stat-card stat-low"><span class="stat-icon">↓</span><span id="stat-low-count" class="stat-num">0</span><span class="stat-label">מתחת למינימום</span></div>
+    <div class="stat-card stat-high"><span class="stat-icon">↑</span><span id="stat-high-count" class="stat-num">0</span><span class="stat-label">מעל מקסימום</span></div>
+    <div class="stat-card stat-events"><span class="stat-icon">▤</span><span id="stat-events-count" class="stat-num">0</span><span class="stat-label">אירועים קרובים</span></div>
   </div>
 
   <div class="owner-tabs">
@@ -732,7 +737,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.7 - 2026-07-28";
+const APP_VERSION = "3.8 - 2026-07-28";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
