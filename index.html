@@ -415,6 +415,30 @@ button{cursor:pointer;}
 .forecast-badge{font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;}
 .forecast-badge.short{background:var(--danger-tint);color:var(--danger);}
 .forecast-badge.ok{background:var(--good-tint);color:var(--good);}
+
+/* ============ INVENTORY REPORT ============ */
+.report-range-row{display:flex;gap:10px;margin-bottom:14px;}
+.report-range-row label{flex:1;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--ink-soft);}
+.report-range-row input{padding:12px 10px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;color:var(--ink);background:var(--surface);}
+.report-move-row{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:10px;padding:10px 12px;border-right:4px solid var(--border);}
+.report-move-row.cat-meat{border-right-color:var(--meat);}
+.report-move-row.cat-dairy{border-right-color:var(--dairy);}
+.report-move-row.cat-pareve{border-right-color:var(--pareve);}
+.report-move-row.cat-drinks{border-right-color:var(--drinks);}
+.report-move-name{font-weight:700;font-size:14px;margin-bottom:2px;}
+.report-move-meta{font-size:12px;color:var(--ink-soft);display:flex;gap:10px;flex-wrap:wrap;}
+.report-move-in{color:var(--good);font-weight:700;}
+.report-move-out{color:var(--danger);font-weight:700;}
+.report-move-current{margin-right:auto;text-align:left;flex:none;}
+.report-move-current .num{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;}
+.report-move-current .lbl{font-size:10.5px;color:var(--ink-faint);}
+@media print{
+  .topbar,.owner-tabs,.stat-strip,.section-title-row #rep-export-csv,.section-title-row #rep-print,
+  #rep-generate-btn,.report-range-row,#owner-events-panel,#owner-status-panel,
+  .icon-btn,.hint-text{display:none !important;}
+  #owner-report-panel,#report-results{display:block !important;}
+  body{background:#fff;}
+}
 </style>
 </head>
 <body>
@@ -654,11 +678,57 @@ button{cursor:pointer;}
   <div class="owner-tabs">
     <button class="tab-btn active" data-owner-tab="events">אירועים ותחזית</button>
     <button class="tab-btn" data-owner-tab="status">סטטוס מלאי</button>
+    <button class="tab-btn" data-owner-tab="report">דוח מלאי</button>
   </div>
 
   <div id="owner-status-panel" class="tab-panel hidden">
     <div class="search-bar"><input id="ow-search" type="search" placeholder="חיפוש מוצר..."></div>
     <div id="owner-status-list" class="item-list read-only"></div>
+  </div>
+
+  <div id="owner-report-panel" class="tab-panel hidden">
+    <div class="section-block">
+      <h3 class="section-title">הפקת דוח לפי תאריכים</h3>
+      <p class="hint-text">כניסות/הוצאות מלאי מתועדות רק החל מהעדכון הזה של המערכת - תנועות שנעשו לפני כן לא יופיעו בדוח. אירועים ותחזית מוצגים לכל תקופה, כולל עבר.</p>
+      <div class="report-range-row">
+        <label>מתאריך<input id="rep-start" type="date"></label>
+        <label>עד תאריך<input id="rep-end" type="date"></label>
+      </div>
+      <button id="rep-generate-btn" class="btn-primary full" type="button">📊 הפק דוח</button>
+    </div>
+
+    <div id="report-results" class="hidden">
+      <div class="section-block">
+        <div class="section-title-row">
+          <h3 class="section-title">תנועות מלאי בתקופה</h3>
+          <div style="display:flex;gap:8px;">
+            <button id="rep-export-csv" class="icon-btn" style="color:var(--accent-dark);border-color:var(--accent);background:var(--accent-tint);" type="button">⬇️ CSV</button>
+            <button id="rep-print" class="icon-btn" style="color:var(--accent-dark);border-color:var(--accent);background:var(--accent-tint);" type="button">🖨️ הדפסה</button>
+          </div>
+        </div>
+        <div id="report-movement-list" class="manage-list" style="max-height:none;"></div>
+        <p id="report-movement-empty" class="empty-state hidden">אין תנועות מלאי רשומות בתקופה הזו.</p>
+      </div>
+
+      <div class="section-block">
+        <h3 class="section-title">אירועים שהיו בתקופה</h3>
+        <div id="report-events-past" class="events-list"></div>
+        <p id="report-events-past-empty" class="empty-state hidden">לא היו אירועים בתקופה הזו.</p>
+      </div>
+
+      <div class="section-block">
+        <h3 class="section-title">אירועים שיהיו בתקופה</h3>
+        <div id="report-events-future" class="events-list"></div>
+        <p id="report-events-future-empty" class="empty-state hidden">אין אירועים עתידיים בתקופה הזו.</p>
+      </div>
+
+      <div class="section-block">
+        <h3 class="section-title">תחזית מלאי לתקופה (לאירועים העתידיים בטווח)</h3>
+        <p class="hint-text">מחושב לפי אורחי האירועים העתידיים בטווח שנבחר, כפול צריכה לאורח, מול המלאי הנוכחי.</p>
+        <div id="report-forecast-list" class="forecast-list"></div>
+        <p id="report-forecast-empty" class="empty-state hidden">אין אירועים עתידיים בטווח, או שאין פריטים עם "צריכה לאורח" מוגדרת.</p>
+      </div>
+    </div>
   </div>
 
   <div id="owner-events-panel" class="tab-panel">
@@ -737,7 +807,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.11 - 2026-07-28";
+const APP_VERSION = "3.12 - 2026-07-28";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -811,6 +881,24 @@ function gaugePercent(item){
   return Math.max(0, Math.min(100, pct));
 }
 
+/* ---------- STOCK MOVEMENT LOG (לצורך דוח כניסה/הוצאה) ---------- */
+/* כל שינוי בכמות המלאי נרשם כאן עם ההפרש (delta) - חיובי = כניסה, שלילי = הוצאה.
+   התיעוד מתחיל רק מרגע ההטמעה של הפיצ'ר, אין נתונים היסטוריים לפני כן. */
+function logStockChange(itemId, itemSnapshot, delta, reason){
+  if (!db || !delta) return;
+  const dateStr = new Date().toISOString().slice(0,10);
+  db.collection("stockLog").add({
+    itemId,
+    itemName: itemSnapshot.name || "",
+    category: itemSnapshot.category || "",
+    unit: itemSnapshot.unit || "",
+    delta: delta,
+    reason: reason || "",
+    date: dateStr,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(err=> console.error("logStockChange failed", err));
+}
+
 /* ---------- screen switching ---------- */
 function showScreen(id){
   $all(".screen").forEach(s => s.classList.add("hidden"));
@@ -833,6 +921,7 @@ function resetOwnerTabsToDefault(){
   $all(".owner-tabs .tab-btn").forEach(b=> b.classList.toggle("active", b.dataset.ownerTab === "events"));
   $("#owner-events-panel").classList.remove("hidden");
   $("#owner-status-panel").classList.add("hidden");
+  $("#owner-report-panel").classList.add("hidden");
 }
 
 function logout(){
@@ -1065,8 +1154,12 @@ $("#qty-save").addEventListener("click", ()=>{
   let val = parseFloat($("#qty-value").value);
   if (Number.isNaN(val) || val < 0){ showToast("כמות לא תקינה", true); return; }
   if (item) val = roundForUnit(val, item.unit);
+  const prevStock = item ? Number(item.stock) : 0;
   db.collection("items").doc(activeQtyItemId).update({stock: val})
-    .then(()=>{ showToast("המלאי נשמר"); closeQtySheet(); })
+    .then(()=>{
+      if (item) logStockChange(activeQtyItemId, item, val - prevStock, "עדכון מלאי (מחסן)");
+      showToast("המלאי נשמר"); closeQtySheet();
+    })
     .catch(()=> showToast("שגיאה בשמירה", true));
 });
 
@@ -1343,7 +1436,10 @@ function wireEditRow(row, id){
     };
     if (!updated.name){ showToast("יש להזין שם", true); return; }
     if (!updated.unit){ showToast("יש לבחור/להזין יחידה", true); return; }
+    const prevStock = Number(itemsData[id] ? itemsData[id].stock : 0);
     db.collection("items").doc(id).update(updated).then(()=>{
+      const delta = updated.stock - prevStock;
+      if (delta) logStockChange(id, updated, delta, "עריכת פריט (מחסן)");
       showToast("הפריט עודכן");
       editingItemId = null;
       renderManageList();
@@ -1439,7 +1535,8 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     barcode: $("#ai-barcode").value.trim()
   };
   if (!item.name || !item.unit){ showToast("יש למלא שם ולבחור/להזין יחידה", true); return; }
-  db.collection("items").add(item).then(()=>{
+  db.collection("items").add(item).then((docRef)=>{
+    if (item.stock) logStockChange(docRef.id, item, item.stock, "פריט חדש");
     showToast("הפריט נוסף בהצלחה");
     e.target.reset();
     $("#ai-unit-custom").classList.add("hidden");
@@ -1508,6 +1605,7 @@ $("#import-btn").addEventListener("click", ()=>{
   const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
   const batch = db.batch();
   let count = 0, errors = 0;
+  const importedForLog = [];
   lines.forEach(line=>{
     const parts = line.split(",").map(p=>p.trim());
     if (parts.length < 6){ errors++; return; }
@@ -1516,7 +1614,7 @@ $("#import-btn").addEventListener("click", ()=>{
     const pkgUnits = parseFloat(packageUnits)||0;
     const pkgUnitAmount = parseFloat(packageUnitAmount)||0;
     const docRef = db.collection("items").doc();
-    batch.set(docRef, {
+    const newItem = {
       name, category, unit,
       stock: roundForUnit(stock, unit),
       min: roundForUnit(min, unit),
@@ -1527,11 +1625,16 @@ $("#import-btn").addEventListener("click", ()=>{
       packageSize: roundForUnit(pkgUnits * pkgUnitAmount, unit),
       packageLabel: (packageLabel||"").trim(),
       barcode: (barcode||"").trim()
-    });
+    };
+    batch.set(docRef, newItem);
+    importedForLog.push({id: docRef.id, item: newItem});
     count++;
   });
   if (count === 0){ showToast("לא נמצאו שורות תקינות לייבוא", true); return; }
   batch.commit().then(()=>{
+    importedForLog.forEach(({id,item})=>{
+      if (item.stock) logStockChange(id, item, item.stock, "ייבוא מהיר");
+    });
     showToast(`יובאו ${count} פריטים${errors? " (״"+errors+" שורות נכשלו)" : ""}`);
     $("#import-text").value = "";
   });
@@ -1550,6 +1653,8 @@ $all(".owner-tabs .tab-btn").forEach(btn=>{
     btn.classList.add("active");
     $("#owner-status-panel").classList.toggle("hidden", btn.dataset.ownerTab !== "status");
     $("#owner-events-panel").classList.toggle("hidden", btn.dataset.ownerTab !== "events");
+    $("#owner-report-panel").classList.toggle("hidden", btn.dataset.ownerTab !== "report");
+    if (btn.dataset.ownerTab === "report") initReportDates();
   });
 });
 
@@ -1748,6 +1853,186 @@ function renderOwnerAll(){
   renderOwnerStats();
   renderEventsList();
   renderForecast();
+}
+
+/* ---------- OWNER: DATE-RANGE REPORT ---------- */
+let reportDatesInitialized = false;
+let lastReportData = null;
+
+function initReportDates(){
+  if (reportDatesInitialized) return;
+  reportDatesInitialized = true;
+  const end = new Date();
+  const start = new Date(); start.setDate(start.getDate()-7);
+  $("#rep-start").value = start.toISOString().slice(0,10);
+  $("#rep-end").value = end.toISOString().slice(0,10);
+}
+
+$("#rep-generate-btn").addEventListener("click", generateReport);
+$("#rep-print").addEventListener("click", ()=> window.print());
+$("#rep-export-csv").addEventListener("click", exportReportCsv);
+
+function generateReport(){
+  const startStr = $("#rep-start").value;
+  const endStr = $("#rep-end").value;
+  if (!startStr || !endStr){ showToast("יש לבחור טווח תאריכים", true); return; }
+  if (startStr > endStr){ showToast("תאריך ההתחלה חייב להיות לפני תאריך הסיום", true); return; }
+  if (!db){ showToast("אין חיבור למסד הנתונים", true); return; }
+
+  const btn = $("#rep-generate-btn");
+  btn.disabled = true;
+  btn.textContent = "מפיק דוח...";
+
+  db.collection("stockLog")
+    .where("date", ">=", startStr)
+    .where("date", "<=", endStr)
+    .get()
+    .then(snap=>{
+      const movementByItem = {};
+      snap.forEach(doc=>{
+        const d = doc.data();
+        const key = d.itemId;
+        if (!movementByItem[key]){
+          movementByItem[key] = {
+            itemId: key,
+            name: (itemsData[key] && itemsData[key].name) || d.itemName || "(פריט שנמחק)",
+            unit: (itemsData[key] && itemsData[key].unit) || d.unit || "",
+            category: (itemsData[key] && itemsData[key].category) || d.category || "pareve",
+            in: 0, out: 0
+          };
+        }
+        if (d.delta > 0) movementByItem[key].in += d.delta;
+        else movementByItem[key].out += Math.abs(d.delta);
+      });
+
+      const todayStr = new Date().toISOString().slice(0,10);
+      const eventsInRange = Object.entries(eventsData)
+        .filter(([id,ev])=> ev.date >= startStr && ev.date <= endStr)
+        .sort((a,b)=> new Date(a[1].date) - new Date(b[1].date));
+      const pastEvents = eventsInRange.filter(([id,ev])=> ev.date < todayStr);
+      const futureEvents = eventsInRange.filter(([id,ev])=> ev.date >= todayStr);
+
+      const forecastRows = [];
+      Object.entries(itemsData).forEach(([id,it])=>{
+        if (!(Number(it.perGuest) > 0)) return;
+        const needed = neededForEvents(futureEvents, it.category, it.perGuest);
+        if (needed > 0){
+          forecastRows.push({it, needed, available: Number(it.stock), short: needed > Number(it.stock)});
+        }
+      });
+
+      lastReportData = { startStr, endStr, movementByItem, pastEvents, futureEvents, forecastRows };
+      renderReportResults(lastReportData);
+      $("#report-results").classList.remove("hidden");
+    })
+    .catch(err=>{
+      console.error(err);
+      showToast("שגיאה בהפקת הדוח: " + err.message, true);
+    })
+    .finally(()=>{
+      btn.disabled = false;
+      btn.textContent = "📊 הפק דוח";
+    });
+}
+
+function renderReportResults(data){
+  const moveContainer = $("#report-movement-list");
+  moveContainer.innerHTML = "";
+  const moveEntries = Object.values(data.movementByItem).sort((a,b)=> a.name.localeCompare(b.name, "he"));
+  if (moveEntries.length === 0){
+    $("#report-movement-empty").classList.remove("hidden");
+  } else {
+    $("#report-movement-empty").classList.add("hidden");
+    moveEntries.forEach(m=>{
+      const currentStock = itemsData[m.itemId] ? fmtNum(itemsData[m.itemId].stock) : "—";
+      const row = document.createElement("div");
+      row.className = `report-move-row cat-${m.category}`;
+      row.innerHTML = `
+        <div style="flex:1;min-width:0;">
+          <div class="report-move-name">${escapeHtml(m.name)}</div>
+          <div class="report-move-meta">
+            <span class="report-move-in">⬆ נכנס ${fmtNum(m.in)} ${escapeHtml(m.unit)}</span>
+            <span class="report-move-out">⬇ יצא ${fmtNum(m.out)} ${escapeHtml(m.unit)}</span>
+          </div>
+        </div>
+        <div class="report-move-current"><div class="num">${currentStock}</div><div class="lbl">מלאי נוכחי</div></div>
+      `;
+      moveContainer.appendChild(row);
+    });
+  }
+
+  renderReportEventsList("#report-events-past", "#report-events-past-empty", data.pastEvents, "לא היו אירועים בתקופה הזו.");
+  renderReportEventsList("#report-events-future", "#report-events-future-empty", data.futureEvents, "אין אירועים עתידיים בתקופה הזו.");
+  renderForecastList("#report-forecast-list", "#report-forecast-empty", data.forecastRows);
+}
+
+function renderReportEventsList(containerSel, emptySel, events, emptyMsg){
+  const container = $(containerSel);
+  container.innerHTML = "";
+  if (events.length === 0){
+    $(emptySel).textContent = emptyMsg;
+    $(emptySel).classList.remove("hidden");
+    return;
+  }
+  $(emptySel).classList.add("hidden");
+  events.forEach(([id,ev])=>{
+    const dateStr = new Date(ev.date).toLocaleDateString("he-IL", {day:"numeric", month:"short", year:"numeric"});
+    const catLabel = CATEGORY_LABELS[ev.category] || "";
+    const row = document.createElement("div");
+    row.className = "event-row";
+    row.innerHTML = `
+      <div class="event-row-info">
+        <div class="event-row-name">${escapeHtml(ev.name)}${catLabel ? ` <span class="event-cat-tag cat-${ev.category}">${catLabel}</span>` : ""}</div>
+        <div class="event-row-meta">${dateStr} · ${ev.guests} אורחים</div>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function csvEscape(val){
+  const s = String(val==null ? "" : val);
+  if (s.includes(",") || s.includes('"') || s.includes("\n")){
+    return '"' + s.replace(/"/g,'""') + '"';
+  }
+  return s;
+}
+
+function exportReportCsv(){
+  if (!lastReportData){ showToast("קודם הפיקו דוח", true); return; }
+  const d = lastReportData;
+  const lines = [];
+  lines.push(`דוח מלאי,${d.startStr} עד ${d.endStr}`);
+  lines.push("");
+  lines.push("תנועות מלאי");
+  lines.push("שם פריט,קטגוריה,יחידה,נכנס,יצא,מלאי נוכחי");
+  Object.values(d.movementByItem).forEach(m=>{
+    const currentStock = itemsData[m.itemId] ? itemsData[m.itemId].stock : "";
+    lines.push([m.name, CATEGORY_LABELS[m.category]||m.category, m.unit, fmtNum(m.in), fmtNum(m.out), currentStock].map(csvEscape).join(","));
+  });
+  lines.push("");
+  lines.push("אירועים שהיו בתקופה");
+  lines.push("שם,סוג,תאריך,אורחים");
+  d.pastEvents.forEach(([id,ev])=> lines.push([ev.name, CATEGORY_LABELS[ev.category]||ev.category, ev.date, ev.guests].map(csvEscape).join(",")));
+  lines.push("");
+  lines.push("אירועים שיהיו בתקופה");
+  lines.push("שם,סוג,תאריך,אורחים");
+  d.futureEvents.forEach(([id,ev])=> lines.push([ev.name, CATEGORY_LABELS[ev.category]||ev.category, ev.date, ev.guests].map(csvEscape).join(",")));
+  lines.push("");
+  lines.push("תחזית לתקופה (לפי אירועים עתידיים בטווח)");
+  lines.push("שם פריט,נדרש,במלאי,חוסר");
+  d.forecastRows.forEach(({it,needed,available,short})=> lines.push([it.name, fmtNum(needed), fmtNum(available), short ? fmtNum(needed-available) : 0].map(csvEscape).join(",")));
+
+  const csvContent = "\uFEFF" + lines.join("\r\n");
+  const blob = new Blob([csvContent], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `דוח-מלאי-${d.startStr}-עד-${d.endStr}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /* ---------- utils ---------- */
