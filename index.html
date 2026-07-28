@@ -372,19 +372,19 @@ button{cursor:pointer;}
   border-top:3px solid var(--border);
 }
 .stat-icon{
-  display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;
-  margin:0 auto 8px;font-size:16px;font-weight:800;color:#fff;background:var(--ink-faint);
+  display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:13px;
+  margin:0 auto 8px;font-size:21px;
 }
 .stat-num{display:block;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
 .stat-label{font-size:11px;color:var(--ink-soft);font-weight:600;}
 .stat-low{border-top-color:var(--danger);}
-.stat-low .stat-icon{background:var(--danger);}
+.stat-low .stat-icon{background:linear-gradient(150deg,#FDE6E1,#FBD2C9);}
 .stat-low .stat-num{color:var(--danger);}
 .stat-high{border-top-color:var(--good);}
-.stat-high .stat-icon{background:var(--good);}
+.stat-high .stat-icon{background:linear-gradient(150deg,#DFF5E8,#C8EEDA);}
 .stat-high .stat-num{color:var(--good);}
 .stat-events{border-top-color:var(--accent);}
-.stat-events .stat-icon{background:var(--accent);}
+.stat-events .stat-icon{background:linear-gradient(150deg,#DCEBFF,#C3DCFB);}
 .stat-events .stat-num{color:var(--accent);}
 
 /* ============ EVENTS & FORECAST ============ */
@@ -646,9 +646,9 @@ button{cursor:pointer;}
   </header>
 
   <div class="stat-strip">
-    <div class="stat-card stat-low"><span class="stat-icon">↓</span><span id="stat-low-count" class="stat-num">0</span><span class="stat-label">מתחת למינימום</span></div>
-    <div class="stat-card stat-high"><span class="stat-icon">↑</span><span id="stat-high-count" class="stat-num">0</span><span class="stat-label">מעל מקסימום</span></div>
-    <div class="stat-card stat-events"><span class="stat-icon">▤</span><span id="stat-events-count" class="stat-num">0</span><span class="stat-label">אירועים קרובים</span></div>
+    <div class="stat-card stat-low"><span class="stat-icon">⚠️</span><span id="stat-low-count" class="stat-num">0</span><span class="stat-label">מתחת למינימום</span></div>
+    <div class="stat-card stat-high"><span class="stat-icon">📈</span><span id="stat-high-count" class="stat-num">0</span><span class="stat-label">מעל מקסימום</span></div>
+    <div class="stat-card stat-events"><span class="stat-icon">📅</span><span id="stat-events-count" class="stat-num">0</span><span class="stat-label">אירועים קרובים</span></div>
   </div>
 
   <div class="owner-tabs">
@@ -737,7 +737,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.10 - 2026-07-28";
+const APP_VERSION = "3.11 - 2026-07-28";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
