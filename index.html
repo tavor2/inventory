@@ -10,39 +10,39 @@
 <style>
 /* ============ TOKENS ============ */
 :root{
-  --bg:#F1F3F2;
+  --bg:#EEF2F8;
   --surface:#FFFFFF;
-  --ink:#16211D;
-  --ink-soft:#56635D;
-  --ink-faint:#8B978F;
-  --accent:#2B6E63;
-  --accent-dark:#1F5049;
-  --accent-tint:#E3EEEC;
-  --brass:#B8863B;
-  --brass-dark:#93692B;
-  --brass-tint:#F3E9D6;
-  --meat:#B5482A;
-  --dairy:#3A6EA5;
-  --pareve:#8C7A4B;
-  --drinks:#2FA0A6;
-  --danger:#C1442D;
-  --danger-tint:#FBE9E5;
-  --good:#2E8B57;
-  --good-tint:#E7F3EB;
-  --warn:#B9790F;
-  --warn-tint:#FAF0DC;
-  --border:#E2E6E4;
+  --ink:#131C2E;
+  --ink-soft:#57647D;
+  --ink-faint:#8D97AC;
+  --accent:#1C5FD1;
+  --accent-dark:#123C89;
+  --accent-tint:#E4EDFB;
+  --brass:#3E8FE0;
+  --brass-dark:#2569B8;
+  --brass-tint:#E8F2FC;
+  --meat:#D0592F;
+  --dairy:#1C5FD1;
+  --pareve:#5B6FA8;
+  --drinks:#2AA9C7;
+  --danger:#D6432B;
+  --danger-tint:#FCEAE6;
+  --good:#1F9D63;
+  --good-tint:#E4F6EC;
+  --warn:#D98A10;
+  --warn-tint:#FDF1DE;
+  --border:#DCE3EF;
   --radius:14px;
-  --shadow:0 1px 2px rgba(22,33,29,0.06),0 4px 16px rgba(22,33,29,0.06);
-  --shadow-lift:0 2px 4px rgba(22,33,29,0.07),0 10px 28px rgba(22,33,29,0.10);
+  --shadow:0 1px 2px rgba(19,28,46,0.06),0 4px 16px rgba(19,28,46,0.07);
+  --shadow-lift:0 2px 4px rgba(19,28,46,0.08),0 10px 28px rgba(19,28,46,0.12);
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 body{
   font-family:'Heebo',system-ui,sans-serif;
   background:
-    radial-gradient(1100px 420px at 15% -8%, rgba(43,110,99,0.06), transparent 60%),
-    radial-gradient(900px 380px at 100% 0%, rgba(184,134,59,0.05), transparent 55%),
+    radial-gradient(1100px 420px at 15% -8%, rgba(28,95,209,0.07), transparent 60%),
+    radial-gradient(900px 380px at 100% 0%, rgba(62,143,224,0.06), transparent 55%),
     var(--bg);
   color:var(--ink);
   min-height:100vh;
@@ -56,7 +56,11 @@ button{cursor:pointer;}
 
 /* ============ LAYOUT SHELLS ============ */
 .screen{max-width:640px;margin:0 auto;min-height:100vh;padding-bottom:40px;}
-.screen-login{display:flex;align-items:center;justify-content:center;padding:24px;}
+.screen-login{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:40px 24px;max-width:none;min-height:100vh;
+  background:linear-gradient(165deg,#2E76E8 0%,#1C5FD1 45%,#123C89 100%);
+}
 
 /* ============ TOAST ============ */
 .toast{
@@ -70,23 +74,18 @@ button{cursor:pointer;}
 
 /* ============ LOGIN ============ */
 .login-card{
-  background:var(--surface);border-radius:24px;padding:40px 28px 32px;width:100%;max-width:380px;
-  box-shadow:var(--shadow-lift);text-align:center;border:1px solid rgba(22,33,29,0.04);
-  position:relative;overflow:hidden;
+  width:100%;max-width:380px;text-align:center;position:relative;
 }
-.login-card::before{
-  content:"";position:absolute;top:0;right:0;left:0;height:5px;
-  background:linear-gradient(90deg,var(--accent),var(--brass));
-}
-.brand{margin-bottom:30px;}
+.brand{margin-bottom:36px;}
 .brand-logo{
-  display:block;width:100%;max-width:260px;height:auto;margin:0 auto 18px;
-  border-radius:14px;box-shadow:var(--shadow-lift);
+  display:block;width:auto;max-width:220px;height:auto;margin:0 auto 22px;
+  border-radius:18px;box-shadow:0 12px 32px rgba(9,26,64,0.35);
+  padding:10px;background:rgba(255,255,255,0.08);
 }
 .brand-dot{
   display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:11px;
   background:linear-gradient(135deg,var(--accent),var(--accent-dark));
-  margin-bottom:16px;box-shadow:0 6px 16px rgba(43,110,99,0.28);
+  margin-bottom:16px;box-shadow:0 6px 16px rgba(28,95,209,0.28);
   position:relative;
 }
 .brand-dot::after{
@@ -94,41 +93,48 @@ button{cursor:pointer;}
 }
 .brand-dot.small{width:22px;height:22px;border-radius:7px;margin-bottom:0;margin-left:10px;box-shadow:none;}
 .brand-dot.small::after{width:7px;height:7px;}
-.brand h1{font-size:25px;font-weight:800;margin:0 0 4px;letter-spacing:-0.02em;}
-.brand-sub{color:var(--ink-soft);font-size:13.5px;margin:0;font-weight:500;letter-spacing:.02em;}
-.role-select{display:flex;flex-direction:column;gap:12px;}
+.brand h1{font-size:30px;font-weight:800;margin:0 0 6px;letter-spacing:-0.02em;color:#fff;}
+.brand-sub{color:rgba(255,255,255,0.78);font-size:14.5px;margin:0;font-weight:500;letter-spacing:.02em;}
+.role-select{display:flex;flex-direction:column;gap:14px;}
 .role-btn{
-  display:flex;align-items:center;gap:12px;justify-content:flex-start;
-  background:var(--bg);border:1.5px solid var(--border);border-radius:13px;
-  padding:17px 18px;font-size:16px;font-weight:600;color:var(--ink);
-  transition:border-color .15s, background .15s, transform .15s;
+  display:flex;align-items:center;gap:14px;justify-content:flex-start;
+  background:#fff;border:none;border-radius:16px;
+  padding:18px 20px;font-size:16.5px;font-weight:700;color:var(--ink);
+  box-shadow:0 10px 26px rgba(9,26,64,0.22);
+  transition:transform .15s, box-shadow .15s;
 }
-.role-btn:hover{border-color:var(--accent);background:var(--accent-tint);transform:translateY(-1px);}
+.role-btn:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(9,26,64,0.28);}
 .role-btn:active{transform:translateY(0);}
 .role-icon{
-  font-size:16px;color:var(--accent);width:30px;height:30px;flex:none;text-align:center;
-  display:flex;align-items:center;justify-content:center;background:var(--accent-tint);border-radius:9px;
+  font-size:19px;width:40px;height:40px;flex:none;text-align:center;
+  display:flex;align-items:center;justify-content:center;background:var(--accent-tint);border-radius:12px;
 }
+.role-btn[data-role="owner"] .role-icon{background:linear-gradient(150deg,#DCEBFF,#C3DCFB);}
+.role-btn[data-role="warehouse"] .role-icon{background:linear-gradient(150deg,#DFF3F6,#C7E8ED);}
 .pin-form{display:flex;flex-direction:column;gap:14px;margin-top:6px;}
-.pin-role-label{font-weight:700;font-size:15px;margin:0;color:var(--accent-dark);}
+.pin-role-label{font-weight:700;font-size:15.5px;margin:0;color:#fff;}
 .pin-form input{
-  padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);
-  font-size:20px;text-align:center;letter-spacing:6px;background:var(--bg);
+  padding:16px;border-radius:14px;border:none;
+  font-size:22px;text-align:center;letter-spacing:6px;background:#fff;
+  box-shadow:0 10px 26px rgba(9,26,64,0.22);
 }
-.pin-form input:focus{outline:none;border-color:var(--accent);}
+.pin-form input:focus{outline:none;box-shadow:0 0 0 3px rgba(255,255,255,0.5);}
 .pin-actions{display:flex;gap:10px;}
-.pin-actions .btn-primary,.pin-actions .btn-ghost{flex:1;}
-.firebase-status{margin-top:18px;font-size:12px;color:var(--ink-faint);}
-.app-version{margin-top:6px;font-size:11px;color:var(--ink-faint);opacity:0.7;}
+.pin-actions .btn-primary{flex:1;background:#fff;color:var(--accent-dark);box-shadow:0 10px 26px rgba(9,26,64,0.22);}
+.pin-actions .btn-primary:hover{filter:none;background:#F3F7FF;}
+.pin-actions .btn-ghost{flex:1;background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.35);}
+.pin-actions .btn-ghost:hover{border-color:#fff;color:#fff;background:rgba(255,255,255,0.2);}
+.firebase-status{margin-top:22px;font-size:12px;color:rgba(255,255,255,0.7);}
+.app-version{margin-top:6px;font-size:11px;color:rgba(255,255,255,0.55);}
 
 /* ============ BUTTONS ============ */
 .btn-primary{
   background:linear-gradient(180deg,var(--accent),var(--accent-dark));color:#fff;border:none;border-radius:12px;
   padding:14px 20px;font-size:15px;font-weight:700;transition:filter .15s, transform .1s;
-  box-shadow:0 3px 10px rgba(43,110,99,0.25);
+  box-shadow:0 3px 10px rgba(28,95,209,0.25);
 }
 .btn-primary:hover{filter:brightness(1.06);}
-.btn-primary:active{transform:translateY(1px);box-shadow:0 1px 4px rgba(43,110,99,0.25);}
+.btn-primary:active{transform:translateY(1px);box-shadow:0 1px 4px rgba(28,95,209,0.25);}
 .btn-ghost{
   background:var(--surface);color:var(--ink-soft);border:1.5px solid var(--border);
   border-radius:12px;padding:13.5px 20px;font-size:15px;font-weight:600;transition:border-color .15s, color .15s;
@@ -136,11 +142,12 @@ button{cursor:pointer;}
 .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
 .full{width:100%;}
 .icon-btn{
-  background:var(--surface);border:1.5px solid var(--border);width:38px;height:38px;
-  border-radius:10px;font-size:16px;display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1.5px solid var(--border);width:40px;height:40px;
+  border-radius:11px;font-size:17px;display:flex;align-items:center;justify-content:center;
   color:var(--ink-soft);transition:border-color .15s, color .15s, background .15s;
 }
 .icon-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-tint);}
+.icon-btn.icon-logout:hover{border-color:var(--danger);color:var(--danger);background:var(--danger-tint);}
 .package-row{
   border:1.5px solid var(--brass);background:var(--brass-tint);border-radius:12px;
   padding:12px 14px;margin-bottom:14px;
@@ -360,6 +367,7 @@ button{cursor:pointer;}
   flex:1;background:var(--surface);border-radius:14px;padding:16px 10px 14px;text-align:center;box-shadow:var(--shadow);
   border-top:3px solid var(--border);
 }
+.stat-icon{display:block;font-size:18px;margin-bottom:2px;}
 .stat-num{display:block;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
 .stat-label{font-size:11px;color:var(--ink-soft);font-weight:600;}
 .stat-low{border-top-color:var(--danger);}
@@ -383,8 +391,8 @@ button{cursor:pointer;}
 .event-row-info{flex:1;}
 .event-row-name{font-weight:700;font-size:14px;}
 .event-cat-tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;vertical-align:middle;}
-.event-cat-tag.cat-meat{background:rgba(181,72,42,0.12);color:var(--meat);}
-.event-cat-tag.cat-dairy{background:rgba(58,110,165,0.12);color:var(--dairy);}
+.event-cat-tag.cat-meat{background:rgba(208,89,47,0.12);color:var(--meat);}
+.event-cat-tag.cat-dairy{background:rgba(28,95,209,0.12);color:var(--dairy);}
 .event-row-meta{font-size:12px;color:var(--ink-soft);}
 .forecast-list{display:flex;flex-direction:column;gap:8px;}
 .forecast-row{
@@ -414,11 +422,11 @@ button{cursor:pointer;}
 
     <div class="role-select" id="role-select">
       <button class="role-btn" data-role="owner">
-        <span class="role-icon">◈</span>
+        <span class="role-icon">📅</span>
         <span>ניהול אירועים</span>
       </button>
       <button class="role-btn" data-role="warehouse">
-        <span class="role-icon">▤</span>
+        <span class="role-icon">📦</span>
         <span>ניהול מחסן</span>
       </button>
     </div>
@@ -442,12 +450,12 @@ button{cursor:pointer;}
   <header class="topbar">
     <div class="topbar-title"><span class="brand-dot small"></span><span>מסך מחסן</span></div>
     <div class="topbar-actions">
-      <button id="wh-manage-btn" class="icon-btn" title="ניהול פריטים">⚙</button>
-      <button id="wh-logout-btn" class="icon-btn" title="יציאה">⏻</button>
+      <button id="wh-manage-btn" class="icon-btn" title="ניהול פריטים">🛠️</button>
+      <button id="wh-logout-btn" class="icon-btn icon-logout" title="יציאה">🚪</button>
     </div>
   </header>
 
-  <div class="search-bar"><div class="search-bar-row"><input id="wh-search" type="search" placeholder="חיפוש מוצר..."><button id="wh-scan-btn" class="scan-btn" type="button" title="סריקת ברקוד">▤</button></div></div>
+  <div class="search-bar"><div class="search-bar-row"><input id="wh-search" type="search" placeholder="חיפוש מוצר..."><button id="wh-scan-btn" class="scan-btn" type="button" title="סריקת ברקוד">📷</button></div></div>
 
   <div class="chip-row" id="wh-category-filter">
     <button class="chip active" data-cat="all">הכל</button>
@@ -536,7 +544,7 @@ button{cursor:pointer;}
           <div class="field-with-scan">
             <input id="ai-barcode" type="text" placeholder="סרקו, הדביקו או הזינו ידנית">
             <button type="button" id="ai-paste-btn" class="scan-btn paste-btn" title="הדבקה מהלוח">📋</button>
-            <button type="button" id="ai-scan-btn" class="scan-btn" title="סריקת ברקוד">▤</button>
+            <button type="button" id="ai-scan-btn" class="scan-btn" title="סריקת ברקוד">📷</button>
           </div>
         </label>
         <label>קטגוריה
@@ -623,14 +631,14 @@ button{cursor:pointer;}
   <header class="topbar">
     <div class="topbar-title"><span class="brand-dot small"></span><span>מסך אירועים</span></div>
     <div class="topbar-actions">
-      <button id="ow-logout-btn" class="icon-btn" title="יציאה">⏻</button>
+      <button id="ow-logout-btn" class="icon-btn icon-logout" title="יציאה">🚪</button>
     </div>
   </header>
 
   <div class="stat-strip">
-    <div class="stat-card stat-low"><span id="stat-low-count" class="stat-num">0</span><span class="stat-label">מתחת למינימום</span></div>
-    <div class="stat-card stat-high"><span id="stat-high-count" class="stat-num">0</span><span class="stat-label">מעל מקסימום</span></div>
-    <div class="stat-card stat-events"><span id="stat-events-count" class="stat-num">0</span><span class="stat-label">אירועים קרובים</span></div>
+    <div class="stat-card stat-low"><span class="stat-icon">⚠️</span><span id="stat-low-count" class="stat-num">0</span><span class="stat-label">מתחת למינימום</span></div>
+    <div class="stat-card stat-high"><span class="stat-icon">📈</span><span id="stat-high-count" class="stat-num">0</span><span class="stat-label">מעל מקסימום</span></div>
+    <div class="stat-card stat-events"><span class="stat-icon">📅</span><span id="stat-events-count" class="stat-num">0</span><span class="stat-label">אירועים קרובים</span></div>
   </div>
 
   <div class="owner-tabs">
@@ -719,7 +727,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.3 - 2026-07-27";
+const APP_VERSION = "3.5 - 2026-07-28";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -1250,7 +1258,7 @@ function editFieldsTemplate(item){
         <div class="field-with-scan">
           <input class="ef-barcode" value="${escapeAttr(item.barcode||'')}" placeholder="ברקוד">
           <button type="button" class="scan-btn paste-btn ef-paste-btn" title="הדבקה מהלוח">📋</button>
-          <button type="button" class="scan-btn ef-scan-btn" title="סריקת ברקוד">▤</button>
+          <button type="button" class="scan-btn ef-scan-btn" title="סריקת ברקוד">📷</button>
         </div>
       </label>
       <div class="full-span" style="display:flex;gap:8px;">
