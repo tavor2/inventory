@@ -350,6 +350,11 @@ button{cursor:pointer;}
 }
 .mini-btn.danger:hover{border-color:var(--danger);color:var(--danger);}
 .mini-btn.edit:hover{border-color:var(--accent);color:var(--accent);}
+.mini-btn.deduct:hover{border-color:var(--warn);color:var(--warn);}
+.deducted-badge{
+  font-size:11px;font-weight:700;color:var(--good);background:var(--good-tint);
+  border-radius:8px;padding:0 8px;display:flex;align-items:center;white-space:nowrap;
+}
 
 .hint-text{font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin:0 0 12px;background:var(--bg);padding:10px 12px;border-radius:10px;}
 .hint-text code{background:var(--surface);padding:1px 5px;border-radius:5px;font-size:11.5px;}
@@ -807,7 +812,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.12 - 2026-07-28";
+const APP_VERSION = "3.13 - 2026-07-28";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -1678,7 +1683,8 @@ $("#add-event-form").addEventListener("submit", (e)=>{
     name: $("#ev-name").value.trim(),
     category: $("#ev-category").value,
     date: $("#ev-date").value,
-    guests: parseInt($("#ev-guests").value, 10) || 0
+    guests: parseInt($("#ev-guests").value, 10) || 0,
+    deducted: false
   };
   if (!ev.name || !ev.category || !ev.date || !ev.guests){ showToast("יש למלא את כל השדות", true); return; }
   db.collection("events").add(ev).then(()=>{
@@ -1692,6 +1698,40 @@ function getUpcomingEvents(){
   return Object.entries(eventsData)
     .filter(([id,ev]) => new Date(ev.date) >= today)
     .sort((a,b)=> new Date(a[1].date) - new Date(b[1].date));
+}
+
+function eventRowHtml(id, ev, opts){
+  opts = opts || {};
+  const dateStr = new Date(ev.date).toLocaleDateString("he-IL", {day:"numeric", month:"short", year:"numeric"});
+  const catLabel = CATEGORY_LABELS[ev.category] || "";
+  const actions = [];
+  if (opts.editable){
+    actions.push(`<button class="mini-btn edit" data-editev="${id}" title="עריכה">✎</button>`);
+    actions.push(`<button class="mini-btn danger" data-delev="${id}" title="מחיקה">🗑</button>`);
+  }
+  if (ev.deducted){
+    actions.push(`<span class="deducted-badge" title="המלאי נוכה עבור אירוע זה">✓ נוכה</span>`);
+  } else {
+    actions.push(`<button class="mini-btn deduct" data-deductev="${id}" title="נכה מלאי לאירוע">📉</button>`);
+  }
+  return `
+    <div class="event-row-info">
+      <div class="event-row-name">${escapeHtml(ev.name)}${catLabel ? ` <span class="event-cat-tag cat-${ev.category}">${catLabel}</span>` : ""}</div>
+      <div class="event-row-meta">${dateStr} · ${ev.guests} אורחים</div>
+    </div>
+    <div class="manage-row-actions">${actions.join("")}</div>
+  `;
+}
+function wireEventRowActions(container){
+  container.querySelectorAll("[data-editev]").forEach(b=> b.addEventListener("click", ()=>{ editingEventId = b.dataset.editev; renderEventsList(); }));
+  container.querySelectorAll("[data-delev]").forEach(b=> b.addEventListener("click", ()=>{
+    if (confirm("למחוק את האירוע?")) db.collection("events").doc(b.dataset.delev).delete();
+  }));
+  container.querySelectorAll("[data-deductev]").forEach(b=> b.addEventListener("click", ()=>{
+    const id = b.dataset.deductev;
+    const ev = eventsData[id];
+    if (ev) deductInventoryForEvent(id, ev);
+  }));
 }
 
 function renderEventsList(){
@@ -1710,25 +1750,11 @@ function renderEventsList(){
         container.appendChild(row);
         wireEventEditRow(row, id);
       } else {
-        const dateStr = new Date(ev.date).toLocaleDateString("he-IL", {day:"numeric", month:"short", year:"numeric"});
-        const catLabel = CATEGORY_LABELS[ev.category] || "";
-        row.innerHTML = `
-          <div class="event-row-info">
-            <div class="event-row-name">${escapeHtml(ev.name)}${catLabel ? ` <span class="event-cat-tag cat-${ev.category}">${catLabel}</span>` : ""}</div>
-            <div class="event-row-meta">${dateStr} · ${ev.guests} אורחים</div>
-          </div>
-          <div class="manage-row-actions">
-            <button class="mini-btn edit" data-editev="${id}" title="עריכה">✎</button>
-            <button class="mini-btn danger" data-delev="${id}" title="מחיקה">🗑</button>
-          </div>
-        `;
+        row.innerHTML = eventRowHtml(id, ev, {editable:true});
         container.appendChild(row);
       }
     });
-    $all("[data-editev]").forEach(b=> b.addEventListener("click", ()=>{ editingEventId = b.dataset.editev; renderEventsList(); }));
-    $all("[data-delev]").forEach(b=> b.addEventListener("click", ()=>{
-      if (confirm("למחוק את האירוע?")) db.collection("events").doc(b.dataset.delev).delete();
-    }));
+    wireEventRowActions(container);
   }
   $("#stat-events-count").textContent = upcoming.length;
 }
@@ -1789,6 +1815,39 @@ function neededForEvents(events, itemCategory, perGuest){
   const guests = events.reduce((sum,[id,ev])=> categoryAppliesToEvent(itemCategory, ev.category) ? sum + (Number(ev.guests)||0) : sum, 0);
   return guests * Number(perGuest||0);
 }
+
+/* ---------- OWNER: AUTOMATIC INVENTORY DEDUCTION PER EVENT ---------- */
+/* מחשב לכל פריט עם "צריכה לאורח" מוגדרת, שרלוונטי לסוג האירוע, כמה יש להוריד מהמלאי */
+function computeEventDeduction(ev){
+  return Object.entries(itemsData)
+    .filter(([id,it]) => Number(it.perGuest) > 0 && categoryAppliesToEvent(it.category, ev.category))
+    .map(([id,it]) => ({ id, it, amount: roundForUnit(Number(ev.guests||0) * Number(it.perGuest), it.unit) }))
+    .filter(row => row.amount > 0);
+}
+function deductInventoryForEvent(evId, ev){
+  if (!db) return;
+  if (ev.deducted){ showToast("המלאי כבר נוכה עבור האירוע הזה", true); return; }
+  const rows = computeEventDeduction(ev);
+  if (rows.length === 0){ showToast("אין פריטים עם \"צריכה לאורח\" רלוונטיים לאירוע הזה", true); return; }
+  const summary = rows.map(r=> `• ${r.it.name}: ${fmtNum(r.amount)} ${r.it.unit}`).join("\n");
+  const ok = confirm(`לנכות מהמלאי עבור "${ev.name}" (${ev.guests} אורחים)?\n\n${summary}`);
+  if (!ok) return;
+
+  const batch = db.batch();
+  rows.forEach(r=>{
+    const newStock = roundForUnit(Number(r.it.stock) - r.amount, r.it.unit);
+    batch.update(db.collection("items").doc(r.id), {stock: newStock});
+  });
+  batch.update(db.collection("events").doc(evId), {deducted: true});
+  batch.commit().then(()=>{
+    rows.forEach(r=> logStockChange(r.id, r.it, -r.amount, `ניכוי אוטומטי לאירוע "${ev.name}"`));
+    showToast("המלאי נוכה בהצלחה");
+  }).catch(err=>{
+    console.error(err);
+    showToast("שגיאה בניכוי המלאי", true);
+  });
+}
+
 function renderForecastList(containerId, emptyId, rows){
   const container = $(containerId);
   container.innerHTML = "";
@@ -1976,18 +2035,12 @@ function renderReportEventsList(containerSel, emptySel, events, emptyMsg){
   }
   $(emptySel).classList.add("hidden");
   events.forEach(([id,ev])=>{
-    const dateStr = new Date(ev.date).toLocaleDateString("he-IL", {day:"numeric", month:"short", year:"numeric"});
-    const catLabel = CATEGORY_LABELS[ev.category] || "";
     const row = document.createElement("div");
     row.className = "event-row";
-    row.innerHTML = `
-      <div class="event-row-info">
-        <div class="event-row-name">${escapeHtml(ev.name)}${catLabel ? ` <span class="event-cat-tag cat-${ev.category}">${catLabel}</span>` : ""}</div>
-        <div class="event-row-meta">${dateStr} · ${ev.guests} אורחים</div>
-      </div>
-    `;
+    row.innerHTML = eventRowHtml(id, ev, {editable:false});
     container.appendChild(row);
   });
+  wireEventRowActions(container);
 }
 
 function csvEscape(val){
