@@ -144,7 +144,7 @@ button{cursor:pointer;}
 .icon-btn{
   background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.4);height:38px;box-sizing:border-box;
   padding:0 14px;border-radius:999px;font-size:13.5px;font-weight:700;color:#fff;
-  display:inline-flex;align-items:center;gap:6px;line-height:1;
+  display:inline-flex;align-items:center;gap:6px;line-height:1;white-space:nowrap;
   transition:background .15s, border-color .15s;
 }
 .icon-btn .btn-emoji{font-size:15px;line-height:1;display:inline-flex;}
@@ -460,7 +460,7 @@ button{cursor:pointer;}
   <header class="topbar">
     <div class="topbar-title"><span class="brand-dot small"></span><span>מסך מחסן</span></div>
     <div class="topbar-actions">
-      <button id="wh-manage-btn" class="icon-btn" title="ניהול פריטים"><span class="btn-emoji">🛠️</span><span>פריטים</span></button>
+      <button id="wh-manage-btn" class="icon-btn" title="עדכון פריט"><span class="btn-emoji">🛠️</span><span>עדכון פריט</span></button>
       <button id="wh-logout-btn" class="icon-btn icon-logout" title="יציאה"><span class="btn-emoji">🚪</span><span>יציאה</span></button>
     </div>
   </header>
@@ -737,7 +737,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.8 - 2026-07-28";
+const APP_VERSION = "3.9 - 2026-07-28";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
