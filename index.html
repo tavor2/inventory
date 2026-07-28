@@ -812,7 +812,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.13 - 2026-07-28";
+const APP_VERSION = "3.14 - 2026-07-28";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -1829,8 +1829,14 @@ function deductInventoryForEvent(evId, ev){
   if (ev.deducted){ showToast("המלאי כבר נוכה עבור האירוע הזה", true); return; }
   const rows = computeEventDeduction(ev);
   if (rows.length === 0){ showToast("אין פריטים עם \"צריכה לאורח\" רלוונטיים לאירוע הזה", true); return; }
-  const summary = rows.map(r=> `• ${r.it.name}: ${fmtNum(r.amount)} ${r.it.unit}`).join("\n");
-  const ok = confirm(`לנכות מהמלאי עבור "${ev.name}" (${ev.guests} אורחים)?\n\n${summary}`);
+  const summary = rows.map(r=>{
+    const resulting = Number(r.it.stock) - r.amount;
+    const warn = resulting < 0 ? `  ⚠ יורד למינוס (${fmtNum(resulting)})` : "";
+    return `• ${r.it.name}: ${fmtNum(r.amount)} ${r.it.unit}${warn}`;
+  }).join("\n");
+  const anyNegative = rows.some(r=> (Number(r.it.stock) - r.amount) < 0);
+  const warningPrefix = anyNegative ? "⚠ שימו לב - חלק מהפריטים ירדו מתחת ל-0 (אין מספיק מלאי בפועל):\n\n" : "";
+  const ok = confirm(`${warningPrefix}לנכות מהמלאי עבור "${ev.name}" (${ev.guests} אורחים)?\n\n${summary}`);
   if (!ok) return;
 
   const batch = db.batch();
