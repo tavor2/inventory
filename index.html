@@ -649,15 +649,17 @@ button{cursor:pointer;}
           <span id="ai-max-pkg-hint" class="package-convert-hint hidden"></span>
         </div>
         <label>צריכה ממוצעת לאורח (לתחזית)<input id="ai-perguest" type="number" step="any" value="0"></label>
+        <label>אחוז מהאורחים שבוחרים בפריט זה (לתפריט מפוצל, לדוגמה: אנטריקוט 40%, פרגית 40%, דג/צמחוני 20%)<input id="ai-guestpercent" type="number" min="0" max="100" step="any" value="100" placeholder="100"></label>
         <button type="submit" class="btn-primary full">הוסף פריט</button>
       </form>
     </div>
 
     <div id="tab-import" class="tab-panel hidden">
-      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח, פריטים באריזה (לא חובה), כמות ליחידה בפריט (לא חובה), שם אריזה (לא חובה), ברקוד (לא חובה)</code></p>
-      <p class="hint-text">לדוגמה - קולה בשישיות של בקבוקי ליטר וחצי (6 בקבוקים, 1.5 ליטר כל אחד):<br><code>קולה, drinks, ליטר, 60, 15, 90, 0.3, 6, 1.5, שישיה</code></p>
+      <p class="hint-text">הדביקו שורה לכל פריט בפורמט:<br><code>שם, קטגוריה (meat/dairy/pareve/drinks), יחידה, מלאי התחלתי, מינימום, מקסימום, צריכה לאורח, פריטים באריזה (לא חובה), כמות ליחידה בפריט (לא חובה), שם אריזה (לא חובה), ברקוד (לא חובה), אחוז מהאורחים (לא חובה, ברירת מחדל 100)</code></p>
+      <p class="hint-text">לדוגמה - קולה בשישיות של בקבוקי ליטר וחצי (6 בקבוקים, 1.5 ליטר כל אחד):<br><code>קולה, drinks, ליטר, 60, 15, 90, 0.3, 6, 1.5, שישיה</code><br>לדוגמה - תפריט בשרי מפוצל, אנטריקוט שמיועד ל-40% מהאורחים בלבד:<br><code>אנטריקוט, meat, ק"ג, 30, 5, 50, 0.25, , , , , 40</code></p>
       <textarea id="import-text" rows="8" placeholder='קולה, drinks, ליטר, 60, 15, 90, 0.3, 6, 1.5, שישיה
-ביצים, pareve, יחידה, 200, 50, 400, 2, 40, 1, ארגז'></textarea>
+ביצים, pareve, יחידה, 200, 50, 400, 2, 40, 1, ארגז
+אנטריקוט, meat, ק"ג, 30, 5, 50, 0.25, , , , , 40'></textarea>
       <button id="import-btn" class="btn-primary full">ייבא פריטים</button>
     </div>
 
@@ -776,6 +778,12 @@ button{cursor:pointer;}
           <option value="dairy">חלבי</option>
         </select>
       </label>
+      <label>שעת האירוע
+        <select id="ev-time" required>
+          <option value="lunch">צהריים</option>
+          <option value="evening">ערב</option>
+        </select>
+      </label>
       <label>תאריך<input id="ev-date" type="date" required></label>
       <label>מספר אורחים<input id="ev-guests" type="number" min="1" required></label>
       <div class="sheet-actions">
@@ -812,7 +820,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.14 - 2026-07-28";
+const APP_VERSION = "3.15 - 2026-07-28";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -829,6 +837,7 @@ try{
 
 const CATEGORY_LABELS = { meat:"בשרי", dairy:"חלבי", pareve:"פרווה", drinks:"שתייה" };
 const CATEGORY_ORDER = ["meat","dairy","pareve","drinks"];
+const TIME_LABELS = { lunch:"צהריים", evening:"ערב" };
 
 /* יחידות שנספרות במספרים שלמים בלבד (אי אפשר "חצי יחידה" או "חצי ארגז") */
 /* לבקשת המשתמש: כל הכמויות (מלאי/מינימום/מקסימום/אריזה) הן תמיד מספרים שלמים,
@@ -1298,7 +1307,7 @@ function renderManageList(){
       row.innerHTML = `
         <div class="manage-row-info">
           <div class="manage-row-name">${escapeHtml(item.name)}</div>
-          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${item.packageSize ? " · "+escapeHtml(item.packageLabel||"אריזה")+": "+(item.packageUnitsCount ? fmtNum(item.packageUnitsCount)+"×"+fmtNum(item.packageUnitAmount||1)+"=" : "")+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
+          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${(item.guestPercent!=null && Number(item.guestPercent)!==100) ? " ("+fmtNum(item.guestPercent)+"% מהאורחים)" : ""}${item.packageSize ? " · "+escapeHtml(item.packageLabel||"אריזה")+": "+(item.packageUnitsCount ? fmtNum(item.packageUnitsCount)+"×"+fmtNum(item.packageUnitAmount||1)+"=" : "")+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
         </div>
         <div class="manage-row-actions">
           <button class="mini-btn edit" data-edit="${id}" title="עריכה">✎</button>
@@ -1362,6 +1371,7 @@ function editFieldsTemplate(item){
       <label>מינימום<input class="ef-min" type="number" step="1" inputmode="numeric" value="${item.min}" placeholder="מינימום"></label>
       <label>מקסימום<input class="ef-max" type="number" step="1" inputmode="numeric" value="${item.max}" placeholder="מקסימום"></label>
       <label class="full-span">צריכה ממוצעת לאורח (לתחזית)<input class="ef-perguest" type="number" step="any" inputmode="decimal" value="${item.perGuest||0}" placeholder="צריכה לאורח"></label>
+      <label class="full-span">אחוז מהאורחים שבוחרים בפריט זה (לתפריט מפוצל, לדוגמה: אנטריקוט 40%, פרגית 40%, דג/צמחוני 20%)<input class="ef-guestpercent" type="number" min="0" max="100" step="any" inputmode="decimal" value="${item.guestPercent!=null ? item.guestPercent : 100}" placeholder="100"></label>
       <label class="full-span">ברקוד (לא חובה)
         <div class="field-with-scan">
           <input class="ef-barcode" value="${escapeAttr(item.barcode||'')}" placeholder="ברקוד">
@@ -1433,6 +1443,7 @@ function wireEditRow(row, id){
       min: roundForUnit(row.querySelector(".ef-min").value, unit),
       max: roundForUnit(row.querySelector(".ef-max").value, unit),
       perGuest: parseFloat(row.querySelector(".ef-perguest").value)||0,
+      guestPercent: (()=>{ const v = parseFloat(row.querySelector(".ef-guestpercent").value); return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 100; })(),
       packageUnitsCount: Math.round(pkgUnits),
       packageUnitAmount: pkgUnitAmount,
       packageSize: roundForUnit(pkgUnits * pkgUnitAmount, unit),
@@ -1533,6 +1544,7 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     min: roundForUnit($("#ai-min").value, unit),
     max: roundForUnit($("#ai-max").value, unit),
     perGuest: parseFloat($("#ai-perguest").value)||0,
+    guestPercent: (()=>{ const v = parseFloat($("#ai-guestpercent").value); return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 100; })(),
     packageUnitsCount: Math.round(pkgUnits),
     packageUnitAmount: pkgUnitAmount,
     packageSize: roundForUnit(pkgUnits * pkgUnitAmount, unit),
@@ -1546,6 +1558,7 @@ $("#add-item-form").addEventListener("submit", (e)=>{
     e.target.reset();
     $("#ai-unit-custom").classList.add("hidden");
     $("#ai-stock").value = 0; $("#ai-min").value = 0; $("#ai-max").value = 0; $("#ai-perguest").value = 0;
+    $("#ai-guestpercent").value = 100;
     $("#ai-package-units").value = 0; $("#ai-package-unit-amount").value = 1;
     $("#ai-package-label-custom").classList.add("hidden");
     ["stock","min","max"].forEach(key=>{
@@ -1614,10 +1627,11 @@ $("#import-btn").addEventListener("click", ()=>{
   lines.forEach(line=>{
     const parts = line.split(",").map(p=>p.trim());
     if (parts.length < 6){ errors++; return; }
-    const [name, category, unit, stock, min, max, perGuest, packageUnits, packageUnitAmount, packageLabel, barcode] = parts;
+    const [name, category, unit, stock, min, max, perGuest, packageUnits, packageUnitAmount, packageLabel, barcode, guestPercent] = parts;
     if (!CATEGORY_LABELS[category]){ errors++; return; }
     const pkgUnits = parseFloat(packageUnits)||0;
     const pkgUnitAmount = parseFloat(packageUnitAmount)||0;
+    const guestPercentVal = (()=>{ const v = parseFloat(guestPercent); return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 100; })();
     const docRef = db.collection("items").doc();
     const newItem = {
       name, category, unit,
@@ -1625,6 +1639,7 @@ $("#import-btn").addEventListener("click", ()=>{
       min: roundForUnit(min, unit),
       max: roundForUnit(max, unit),
       perGuest: parseFloat(perGuest)||0,
+      guestPercent: guestPercentVal,
       packageUnitsCount: Math.round(pkgUnits),
       packageUnitAmount: pkgUnitAmount,
       packageSize: roundForUnit(pkgUnits * pkgUnitAmount, unit),
@@ -1672,6 +1687,7 @@ function closeAddEventSheet(){
   $("#add-event-sheet").classList.add("hidden");
   $("#add-event-form").reset();
   $("#ev-category").value = "meat";
+  $("#ev-time").value = "evening";
 }
 $("#open-add-event-btn").addEventListener("click", openAddEventSheet);
 $("#add-event-cancel").addEventListener("click", closeAddEventSheet);
@@ -1682,11 +1698,12 @@ $("#add-event-form").addEventListener("submit", (e)=>{
   const ev = {
     name: $("#ev-name").value.trim(),
     category: $("#ev-category").value,
+    timeOfDay: $("#ev-time").value,
     date: $("#ev-date").value,
     guests: parseInt($("#ev-guests").value, 10) || 0,
     deducted: false
   };
-  if (!ev.name || !ev.category || !ev.date || !ev.guests){ showToast("יש למלא את כל השדות", true); return; }
+  if (!ev.name || !ev.category || !ev.timeOfDay || !ev.date || !ev.guests){ showToast("יש למלא את כל השדות", true); return; }
   db.collection("events").add(ev).then(()=>{
     showToast("האירוע נוסף");
     closeAddEventSheet();
@@ -1714,10 +1731,11 @@ function eventRowHtml(id, ev, opts){
   } else {
     actions.push(`<button class="mini-btn deduct" data-deductev="${id}" title="נכה מלאי לאירוע">📉</button>`);
   }
+  const timeLabel = TIME_LABELS[ev.timeOfDay] || "";
   return `
     <div class="event-row-info">
       <div class="event-row-name">${escapeHtml(ev.name)}${catLabel ? ` <span class="event-cat-tag cat-${ev.category}">${catLabel}</span>` : ""}</div>
-      <div class="event-row-meta">${dateStr} · ${ev.guests} אורחים</div>
+      <div class="event-row-meta">${dateStr}${timeLabel ? " · "+timeLabel : ""} · ${ev.guests} אורחים</div>
     </div>
     <div class="manage-row-actions">${actions.join("")}</div>
   `;
@@ -1769,6 +1787,12 @@ function eventEditFieldsTemplate(ev){
           <option value="dairy" ${ev.category==="dairy"?"selected":""}>חלבי</option>
         </select>
       </label>
+      <label>שעת האירוע
+        <select class="eev-time">
+          <option value="lunch" ${ev.timeOfDay==="lunch"?"selected":""}>צהריים</option>
+          <option value="evening" ${ev.timeOfDay!=="lunch"?"selected":""}>ערב</option>
+        </select>
+      </label>
       <label>תאריך<input class="eev-date" type="date" value="${escapeAttr(ev.date)}"></label>
       <label>מספר אורחים<input class="eev-guests" type="number" min="1" step="1" inputmode="numeric" value="${ev.guests}" placeholder="מספר אורחים"></label>
       <div class="full-span" style="display:flex;gap:8px;">
@@ -1784,10 +1808,11 @@ function wireEventEditRow(row, id){
     const updated = {
       name: row.querySelector(".eev-name").value.trim(),
       category: row.querySelector(".eev-category").value,
+      timeOfDay: row.querySelector(".eev-time").value,
       date: row.querySelector(".eev-date").value,
       guests: parseInt(row.querySelector(".eev-guests").value, 10) || 0
     };
-    if (!updated.name || !updated.category || !updated.date || !updated.guests){ showToast("יש למלא את כל השדות", true); return; }
+    if (!updated.name || !updated.category || !updated.timeOfDay || !updated.date || !updated.guests){ showToast("יש למלא את כל השדות", true); return; }
     db.collection("events").doc(id).update(updated).then(()=>{
       showToast("האירוע עודכן");
       editingEventId = null;
@@ -1811,9 +1836,12 @@ function categoryAppliesToEvent(itemCategory, eventCategory){
   if (itemCategory === "pareve" || itemCategory === "drinks") return true;
   return itemCategory === eventCategory;
 }
-function neededForEvents(events, itemCategory, perGuest){
-  const guests = events.reduce((sum,[id,ev])=> categoryAppliesToEvent(itemCategory, ev.category) ? sum + (Number(ev.guests)||0) : sum, 0);
-  return guests * Number(perGuest||0);
+function itemGuestPercent(item){
+  return (item.guestPercent!=null && item.guestPercent!=="") ? Number(item.guestPercent) : 100;
+}
+function neededForEvents(events, item){
+  const guests = events.reduce((sum,[id,ev])=> categoryAppliesToEvent(item.category, ev.category) ? sum + (Number(ev.guests)||0) : sum, 0);
+  return guests * (itemGuestPercent(item)/100) * Number(item.perGuest||0);
 }
 
 /* ---------- OWNER: AUTOMATIC INVENTORY DEDUCTION PER EVENT ---------- */
@@ -1821,7 +1849,7 @@ function neededForEvents(events, itemCategory, perGuest){
 function computeEventDeduction(ev){
   return Object.entries(itemsData)
     .filter(([id,it]) => Number(it.perGuest) > 0 && categoryAppliesToEvent(it.category, ev.category))
-    .map(([id,it]) => ({ id, it, amount: roundForUnit(Number(ev.guests||0) * Number(it.perGuest), it.unit) }))
+    .map(([id,it]) => ({ id, it, amount: roundForUnit(Number(ev.guests||0) * (itemGuestPercent(it)/100) * Number(it.perGuest), it.unit) }))
     .filter(row => row.amount > 0);
 }
 function deductInventoryForEvent(evId, ev){
@@ -1867,9 +1895,10 @@ function renderForecastList(containerId, emptyId, rows){
     .forEach(({it, needed, available, short})=>{
       const row = document.createElement("div");
       row.className = "forecast-row" + (short ? " short" : "");
+      const pctNote = (it.guestPercent!=null && Number(it.guestPercent)!==100) ? ` (${fmtNum(it.guestPercent)}% מהאורחים)` : "";
       row.innerHTML = `
         <div>
-          <div class="forecast-row-name">${escapeHtml(it.name)}</div>
+          <div class="forecast-row-name">${escapeHtml(it.name)}${pctNote}</div>
           <div class="forecast-row-detail">נדרש ${fmtNum(needed)} ${escapeHtml(it.unit)} · צפוי במלאי ${fmtNum(available)}</div>
         </div>
         <span class="forecast-badge ${short?'short':'ok'}">${short ? `חסר ${fmtNum(needed-available)}` : "מספיק"}</span>
@@ -1889,8 +1918,8 @@ function renderForecast(){
   const rowsThis = [];
   const rowsNext = [];
   relevant.forEach(([id,it])=>{
-    const neededThis = neededForEvents(thisWeekEvents, it.category, it.perGuest);
-    const neededNext = neededForEvents(nextWeekEvents, it.category, it.perGuest);
+    const neededThis = neededForEvents(thisWeekEvents, it);
+    const neededNext = neededForEvents(nextWeekEvents, it);
     const stockAfterThis = Number(it.stock) - neededThis;
     if (neededThis > 0){
       rowsThis.push({it, needed: neededThis, available: Number(it.stock), short: neededThis > Number(it.stock)});
@@ -1980,7 +2009,7 @@ function generateReport(){
       const forecastRows = [];
       Object.entries(itemsData).forEach(([id,it])=>{
         if (!(Number(it.perGuest) > 0)) return;
-        const needed = neededForEvents(futureEvents, it.category, it.perGuest);
+        const needed = neededForEvents(futureEvents, it);
         if (needed > 0){
           forecastRows.push({it, needed, available: Number(it.stock), short: needed > Number(it.stock)});
         }
@@ -2071,12 +2100,12 @@ function exportReportCsv(){
   });
   lines.push("");
   lines.push("אירועים שהיו בתקופה");
-  lines.push("שם,סוג,תאריך,אורחים");
-  d.pastEvents.forEach(([id,ev])=> lines.push([ev.name, CATEGORY_LABELS[ev.category]||ev.category, ev.date, ev.guests].map(csvEscape).join(",")));
+  lines.push("שם,סוג,שעה,תאריך,אורחים");
+  d.pastEvents.forEach(([id,ev])=> lines.push([ev.name, CATEGORY_LABELS[ev.category]||ev.category, TIME_LABELS[ev.timeOfDay]||"", ev.date, ev.guests].map(csvEscape).join(",")));
   lines.push("");
   lines.push("אירועים שיהיו בתקופה");
-  lines.push("שם,סוג,תאריך,אורחים");
-  d.futureEvents.forEach(([id,ev])=> lines.push([ev.name, CATEGORY_LABELS[ev.category]||ev.category, ev.date, ev.guests].map(csvEscape).join(",")));
+  lines.push("שם,סוג,שעה,תאריך,אורחים");
+  d.futureEvents.forEach(([id,ev])=> lines.push([ev.name, CATEGORY_LABELS[ev.category]||ev.category, TIME_LABELS[ev.timeOfDay]||"", ev.date, ev.guests].map(csvEscape).join(",")));
   lines.push("");
   lines.push("תחזית לתקופה (לפי אירועים עתידיים בטווח)");
   lines.push("שם פריט,נדרש,במלאי,חוסר");
