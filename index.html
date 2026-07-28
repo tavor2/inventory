@@ -91,8 +91,8 @@ button{cursor:pointer;}
 .brand-dot::after{
   content:"";width:12px;height:12px;border-radius:3px;background:var(--brass);transform:rotate(45deg);
 }
-.brand-dot.small{width:22px;height:22px;border-radius:7px;margin-bottom:0;margin-left:10px;box-shadow:none;}
-.brand-dot.small::after{width:7px;height:7px;}
+.brand-dot.small{width:22px;height:22px;border-radius:7px;margin-bottom:0;margin-left:10px;box-shadow:none;background:rgba(255,255,255,0.22);}
+.brand-dot.small::after{width:7px;height:7px;background:#fff;}
 .brand h1{font-size:30px;font-weight:800;margin:0 0 6px;letter-spacing:-0.02em;color:#fff;}
 .brand-sub{color:rgba(255,255,255,0.78);font-size:14.5px;margin:0;font-weight:500;letter-spacing:.02em;}
 .role-select{display:flex;flex-direction:column;gap:14px;}
@@ -142,12 +142,13 @@ button{cursor:pointer;}
 .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
 .full{width:100%;}
 .icon-btn{
-  background:var(--surface);border:1.5px solid var(--border);width:40px;height:40px;
-  border-radius:11px;font-size:17px;display:flex;align-items:center;justify-content:center;
-  color:var(--ink-soft);transition:border-color .15s, color .15s, background .15s;
+  background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.4);
+  padding:9px 14px;border-radius:999px;font-size:14px;font-weight:700;color:#fff;
+  display:flex;align-items:center;gap:6px;transition:background .15s, border-color .15s;
 }
-.icon-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-tint);}
-.icon-btn.icon-logout:hover{border-color:var(--danger);color:var(--danger);background:var(--danger-tint);}
+.icon-btn span{font-size:13px;}
+.icon-btn:hover{background:rgba(255,255,255,0.28);border-color:#fff;color:#fff;}
+.icon-btn.icon-logout:hover{background:rgba(255,255,255,0.28);border-color:#fff;color:#fff;}
 .package-row{
   border:1.5px solid var(--brass);background:var(--brass-tint);border-radius:12px;
   padding:12px 14px;margin-bottom:14px;
@@ -171,11 +172,13 @@ button{cursor:pointer;}
 
 /* ============ TOPBAR ============ */
 .topbar{
-  position:sticky;top:0;z-index:20;background:rgba(241,243,242,0.92);backdrop-filter:blur(8px);
+  position:sticky;top:0;z-index:20;
+  background:linear-gradient(165deg,#2E76E8 0%,#1C5FD1 55%,#123C89 100%);
   display:flex;align-items:center;justify-content:space-between;
-  padding:16px 18px;border-bottom:1px solid rgba(22,33,29,0.06);
+  padding:18px 18px 30px;border-radius:0 0 22px 22px;
+  box-shadow:0 10px 24px rgba(9,26,64,0.2);
 }
-.topbar-title{display:flex;align-items:center;font-weight:800;font-size:16.5px;letter-spacing:-0.01em;}
+.topbar-title{display:flex;align-items:center;font-weight:800;font-size:16.5px;letter-spacing:-0.01em;color:#fff;}
 .topbar-actions{display:flex;gap:8px;}
 
 /* ============ SEARCH & CHIPS ============ */
@@ -362,9 +365,9 @@ button{cursor:pointer;}
 .edit-fields .full-span{grid-column:1/-1;}
 
 /* ============ OWNER STAT STRIP ============ */
-.stat-strip{display:flex;gap:10px;padding:14px 18px;}
+.stat-strip{display:flex;gap:10px;padding:14px 18px 14px;margin-top:-24px;position:relative;z-index:5;}
 .stat-card{
-  flex:1;background:var(--surface);border-radius:14px;padding:16px 10px 14px;text-align:center;box-shadow:var(--shadow);
+  flex:1;background:var(--surface);border-radius:14px;padding:16px 10px 14px;text-align:center;box-shadow:var(--shadow-lift);
   border-top:3px solid var(--border);
 }
 .stat-icon{display:block;font-size:18px;margin-bottom:2px;}
@@ -450,8 +453,8 @@ button{cursor:pointer;}
   <header class="topbar">
     <div class="topbar-title"><span class="brand-dot small"></span><span>מסך מחסן</span></div>
     <div class="topbar-actions">
-      <button id="wh-manage-btn" class="icon-btn" title="ניהול פריטים">🛠️</button>
-      <button id="wh-logout-btn" class="icon-btn icon-logout" title="יציאה">🚪</button>
+      <button id="wh-manage-btn" class="icon-btn" title="ניהול פריטים">🛠️<span>פריטים</span></button>
+      <button id="wh-logout-btn" class="icon-btn icon-logout" title="יציאה">🚪<span>יציאה</span></button>
     </div>
   </header>
 
@@ -631,7 +634,7 @@ button{cursor:pointer;}
   <header class="topbar">
     <div class="topbar-title"><span class="brand-dot small"></span><span>מסך אירועים</span></div>
     <div class="topbar-actions">
-      <button id="ow-logout-btn" class="icon-btn icon-logout" title="יציאה">🚪</button>
+      <button id="ow-logout-btn" class="icon-btn icon-logout" title="יציאה">🚪<span>יציאה</span></button>
     </div>
   </header>
 
@@ -727,7 +730,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.5 - 2026-07-28";
+const APP_VERSION = "3.6 - 2026-07-28";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
