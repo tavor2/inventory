@@ -316,7 +316,7 @@ button{cursor:pointer;}
 .sheet-actions .btn-ghost,.sheet-actions .btn-primary{flex:1;}
 
 /* ============ MANAGEMENT ============ */
-.manage-tabs,.owner-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--bg);padding:4px;border-radius:12px;}
+.manage-tabs,.owner-tabs,.md-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--bg);padding:4px;border-radius:12px;}
 .tab-btn{
   flex:1;padding:10px;border-radius:9px;border:none;background:transparent;
   font-size:13px;font-weight:700;color:var(--ink-soft);
@@ -795,6 +795,10 @@ button{cursor:pointer;}
         </select>
       </label>
       <label>תאריך<input id="ev-date" type="date" required></label>
+      <div id="ev-buffet-row" class="split-row hidden">
+        <input id="ev-includes-buffet" type="checkbox" style="width:20px;height:20px;flex:none;">
+        <span class="split-row-name">כולל בופה בכניסה (קובה/עראייס)</span>
+      </div>
       <label>מספר אורחים<input id="ev-guests" type="number" min="1" required></label>
       <div id="ev-meat-preview" class="hint-text hidden" style="white-space:pre-line;"></div>
       <div class="sheet-actions">
@@ -808,28 +812,54 @@ button{cursor:pointer;}
 <!-- Meat tray defaults settings sheet -->
 <div id="meat-defaults-sheet" class="sheet hidden">
   <div class="sheet-backdrop" id="meat-defaults-backdrop"></div>
-  <div class="sheet-panel">
+  <div class="sheet-panel sheet-panel-large">
     <div class="sheet-handle"></div>
     <h3>הגדרות ברירת מחדל - מגשי בשר</h3>
-    <p class="sheet-meta">חל אוטומטית על כל אירוע בשרי חדש. הניכוי מהמלאי לפרגית/אנטריקוט/בקר מחושב לפי מספר מגשים שלמים (מעוגל למעלה) ולא לפי כמות מדויקת.</p>
-    <form id="meat-defaults-form" class="form-grid">
-      <label>קיבולת מגש סטנדרטי (ק"ג גולמי)<input id="md-tray-capacity" type="number" min="0" step="any" inputmode="decimal" value="3"></label>
-      <label>כמות בשר גולמי לאורח, סה"כ לכל סוגי הבשר (ק"ג)<input id="md-guest-meat" type="number" min="0" step="any" inputmode="decimal" value="0.24"></label>
-      <p class="hint-text">תמהיל ברירת מחדל בין סוגי הבשר (סה"כ חייב להיות 100%):</p>
-      <div class="split-list">
-        <div class="split-row"><span class="split-row-name">פרגית</span><input id="md-mix-pargit" type="number" min="0" max="100" step="any" class="split-row-input" value="40"><span class="split-row-pct">%</span></div>
-        <div class="split-row"><span class="split-row-name">אנטריקוט</span><input id="md-mix-entrecote" type="number" min="0" max="100" step="any" class="split-row-input" value="35"><span class="split-row-pct">%</span></div>
-        <div class="split-row"><span class="split-row-name">בקר/צלי</span><input id="md-mix-beef" type="number" min="0" max="100" step="any" class="split-row-input" value="25"><span class="split-row-pct">%</span></div>
-        <div class="split-row"><span class="split-row-name">אסאדו</span><input id="md-mix-asado" type="number" min="0" max="100" step="any" class="split-row-input" value="0"><span class="split-row-pct">%</span></div>
-      </div>
-      <p id="md-mix-total-warn" class="hint-text hidden" style="color:var(--danger);"></p>
-      <p class="hint-text">שיוך לפריטי מלאי בפועל (כדי שהמערכת תדע מאיזה פריט להוריד מלאי):</p>
-      <label>פריט לפרגית<select id="md-item-pargit"></select></label>
-      <label>פריט לאנטריקוט<select id="md-item-entrecote"></select></label>
-      <label>פריט לבקר/צלי<select id="md-item-beef"></select></label>
-      <label>פריט לאסאדו<select id="md-item-asado"></select></label>
-      <button type="submit" class="btn-primary full">שמור הגדרות</button>
-    </form>
+    <div class="md-tabs">
+      <button type="button" class="tab-btn active" data-md-tab="main">מנה עיקרית</button>
+      <button type="button" class="tab-btn" data-md-tab="buffet">בופה בכניסה</button>
+    </div>
+
+    <div id="md-tab-main" class="tab-panel">
+      <p class="sheet-meta">חל אוטומטית על כל אירוע בשרי חדש. הניכוי מהמלאי לפרגית/אנטריקוט/בקר/אסאדו מחושב לפי מספר מגשים שלמים (מעוגל למעלה) ולא לפי כמות מדויקת.</p>
+      <form id="meat-defaults-form" class="form-grid">
+        <label>קיבולת מגש סטנדרטי (ק"ג גולמי)<input id="md-tray-capacity" type="number" min="0" step="any" inputmode="decimal" value="3"></label>
+        <label>כמות בשר גולמי לאורח, סה"כ לכל סוגי הבשר (ק"ג)<input id="md-guest-meat" type="number" min="0" step="any" inputmode="decimal" value="0.24"></label>
+        <p class="hint-text">תמהיל ברירת מחדל בין סוגי הבשר (סה"כ חייב להיות 100%):</p>
+        <div class="split-list">
+          <div class="split-row"><span class="split-row-name">פרגית</span><input id="md-mix-pargit" type="number" min="0" max="100" step="any" class="split-row-input" value="40"><span class="split-row-pct">%</span></div>
+          <div class="split-row"><span class="split-row-name">אנטריקוט</span><input id="md-mix-entrecote" type="number" min="0" max="100" step="any" class="split-row-input" value="35"><span class="split-row-pct">%</span></div>
+          <div class="split-row"><span class="split-row-name">בקר/צלי</span><input id="md-mix-beef" type="number" min="0" max="100" step="any" class="split-row-input" value="25"><span class="split-row-pct">%</span></div>
+          <div class="split-row"><span class="split-row-name">אסאדו</span><input id="md-mix-asado" type="number" min="0" max="100" step="any" class="split-row-input" value="0"><span class="split-row-pct">%</span></div>
+        </div>
+        <p id="md-mix-total-warn" class="hint-text hidden" style="color:var(--danger);"></p>
+        <p class="hint-text">שיוך לפריטי מלאי בפועל (כדי שהמערכת תדע מאיזה פריט להוריד מלאי):</p>
+        <label>פריט לפרגית<select id="md-item-pargit"></select></label>
+        <label>פריט לאנטריקוט<select id="md-item-entrecote"></select></label>
+        <label>פריט לבקר/צלי<select id="md-item-beef"></select></label>
+        <label>פריט לאסאדו<select id="md-item-asado"></select></label>
+        <button type="submit" class="btn-primary full">שמור הגדרות מנה עיקרית</button>
+      </form>
+    </div>
+
+    <div id="md-tab-buffet" class="tab-panel hidden">
+      <p class="sheet-meta">חל רק על אירועים שמסומנים "כולל בופה בכניסה". קיבולת מגש ותמהיל נפרדים לגמרי מהמנה העיקרית - הניכוי מהמלאי מחושב באותו אופן (מגשים שלמים, מעוגל למעלה).</p>
+      <form id="buffet-defaults-form" class="form-grid">
+        <label>קיבולת מגש בופה (ק"ג גולמי)<input id="md-buffet-tray-capacity" type="number" min="0" step="any" inputmode="decimal" value="3.5"></label>
+        <label>כמות בשר גולמי לאורח בבופה, סה"כ (ק"ג)<input id="md-buffet-guest-meat" type="number" min="0" step="any" inputmode="decimal" value="0.17"></label>
+        <p class="hint-text">תמהיל ברירת מחדל בין סוגי הבופה (סה"כ חייב להיות 100%):</p>
+        <div class="split-list">
+          <div class="split-row"><span class="split-row-name">קובה</span><input id="md-buffet-mix-kubeh" type="number" min="0" max="100" step="any" class="split-row-input" value="50"><span class="split-row-pct">%</span></div>
+          <div class="split-row"><span class="split-row-name">עראייס/קבב</span><input id="md-buffet-mix-araayes" type="number" min="0" max="100" step="any" class="split-row-input" value="50"><span class="split-row-pct">%</span></div>
+        </div>
+        <p id="md-buffet-mix-total-warn" class="hint-text hidden" style="color:var(--danger);"></p>
+        <p class="hint-text">שיוך לפריטי מלאי בפועל (כדי שהמערכת תדע מאיזה פריט להוריד מלאי):</p>
+        <label>פריט לקובה<select id="md-buffet-item-kubeh"></select></label>
+        <label>פריט לעראייס/קבב<select id="md-buffet-item-araayes"></select></label>
+        <button type="submit" class="btn-primary full">שמור הגדרות בופה</button>
+      </form>
+    </div>
+
     <button id="meat-defaults-close" class="btn-ghost full close-manage">סגירה</button>
   </div>
 </div>
@@ -860,7 +890,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.19 - 2026-07-30";
+const APP_VERSION = "3.20 - 2026-07-31";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -897,13 +927,29 @@ function stripDecimalLive(el){
 let itemsData = {};   // id -> item
 let eventsData = {};  // id -> event
 let meatDefaults = null; // הגדרות ברירת מחדל למגשי בשר (פרגית/אנטריקוט/בקר) - נטען מ-settings/meatDefaults
+let buffetDefaults = null; // הגדרות ברירת מחדל למגשי בופה (קובה/עראייס) - נטען מ-settings/buffetDefaults
 const MEAT_ROLE_LABELS = { pargit:"פרגית", entrecote:"אנטריקוט", beef:"בקר/צלי", asado:"אסאדו" };
+const BUFFET_ROLE_LABELS = { kubeh:"קובה", araayes:"עראייס/קבב" };
 function getMeatRoleForItem(id){
   if (!meatDefaults || !id) return null;
   if (meatDefaults.itemPargit === id) return "pargit";
   if (meatDefaults.itemEntrecote === id) return "entrecote";
   if (meatDefaults.itemBeef === id) return "beef";
   if (meatDefaults.itemAsado === id) return "asado";
+  return null;
+}
+function getBuffetRoleForItem(id){
+  if (!buffetDefaults || !id) return null;
+  if (buffetDefaults.itemKubeh === id) return "kubeh";
+  if (buffetDefaults.itemAraayes === id) return "araayes";
+  return null;
+}
+/* מחזיר תיאור אחיד לתג המוצג על הפריט - בין אם הוא משויך למגש מנה עיקרית או למגש בופה */
+function getTrayAssociation(id){
+  const mainRole = getMeatRoleForItem(id);
+  if (mainRole) return { kind:"main", emoji:"🥩", label: `מגשי בשר (${MEAT_ROLE_LABELS[mainRole]})` };
+  const buffetRole = getBuffetRoleForItem(id);
+  if (buffetRole) return { kind:"buffet", emoji:"🍽", label: `מגשי בופה (${BUFFET_ROLE_LABELS[buffetRole]})` };
   return null;
 }
 let currentRole = null; // 'warehouse' | 'owner'
@@ -1048,6 +1094,10 @@ function initListeners(){
     meatDefaults = doc.exists ? doc.data() : null;
     renderAll();
   }, err=> console.error("meatDefaults listener failed", err));
+  db.collection("settings").doc("buffetDefaults").onSnapshot(doc=>{
+    buffetDefaults = doc.exists ? doc.data() : null;
+    renderAll();
+  }, err=> console.error("buffetDefaults listener failed", err));
 }
 function renderAll(){
   if (currentRole === "warehouse"){ renderWarehouseList(); renderManageList(); }
@@ -1077,12 +1127,12 @@ function getFilteredItems(searchVal, cat){
 function buildItemCard(id, item, readOnly){
   const status = itemStatus(item);
   const pct = gaugePercent(item);
-  const meatRole = getMeatRoleForItem(id);
+  const trayAssoc = getTrayAssociation(id);
   const card = document.createElement("div");
   card.className = `item-card cat-${item.category}` + (readOnly ? " read-only" : "");
   card.innerHTML = `
     <div class="item-card-main">
-      <div class="item-card-name"><span class="status-dot status-${status}"></span>${escapeHtml(item.name)}${meatRole ? ` <span class="meat-role-tag">🥩 ${MEAT_ROLE_LABELS[meatRole]}</span>` : ""}</div>
+      <div class="item-card-name"><span class="status-dot status-${status}"></span>${escapeHtml(item.name)}${trayAssoc ? ` <span class="meat-role-tag">${trayAssoc.emoji} ${escapeHtml(trayAssoc.label)}</span>` : ""}</div>
       <div class="item-card-unit">${escapeHtml(item.unit)} · מינ׳ ${fmtNum(item.min)} · מקס׳ ${fmtNum(item.max)}</div>
       <div class="mini-gauge"><div class="mini-gauge-fill" style="width:${pct}%;background:${statusColorVar(status)}"></div></div>
     </div>
@@ -1362,7 +1412,7 @@ function renderManageList(){
       row.innerHTML = `
         <div class="manage-row-info">
           <div class="manage-row-name">${escapeHtml(item.name)}</div>
-          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${getMeatRoleForItem(id) ? ` · 🥩 מגשי בשר (${MEAT_ROLE_LABELS[getMeatRoleForItem(id)]})` : (item.guestPercent!=null && Number(item.guestPercent)!==100) ? " ("+fmtNum(item.guestPercent)+"% מהאורחים)" : ""}${item.packageSize ? " · "+escapeHtml(item.packageLabel||"אריזה")+": "+(item.packageUnitsCount ? fmtNum(item.packageUnitsCount)+"×"+fmtNum(item.packageUnitAmount||1)+"=" : "")+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
+          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${getTrayAssociation(id) ? ` · ${getTrayAssociation(id).emoji} ${escapeHtml(getTrayAssociation(id).label)}` : (item.guestPercent!=null && Number(item.guestPercent)!==100) ? " ("+fmtNum(item.guestPercent)+"% מהאורחים)" : ""}${item.packageSize ? " · "+escapeHtml(item.packageLabel||"אריזה")+": "+(item.packageUnitsCount ? fmtNum(item.packageUnitsCount)+"×"+fmtNum(item.packageUnitAmount||1)+"=" : "")+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
         </div>
         <div class="manage-row-actions">
           <button class="mini-btn edit" data-edit="${id}" title="עריכה">✎</button>
@@ -1387,7 +1437,7 @@ const UNIT_OPTIONS = ['ק"ג','גרם','יחידה','ארגז','בקבוק','ל�
 const PACKAGE_LABEL_OPTIONS = ['ארגז','קרטון','שישיה','חבית','מגש','שקית','ניילון'];
 function editFieldsTemplate(item, id){
   const isKnownUnit = UNIT_OPTIONS.includes(item.unit);
-  const meatRole = getMeatRoleForItem(id);
+  const trayAssoc = getTrayAssociation(id);
   return `
     <div class="edit-fields">
       <label>שם המוצר<input class="ef-name" value="${escapeAttr(item.name)}" placeholder="שם"></label>
@@ -1427,8 +1477,8 @@ function editFieldsTemplate(item, id){
       <label>מינימום<input class="ef-min" type="number" step="1" inputmode="numeric" value="${item.min}" placeholder="מינימום"></label>
       <label>מקסימום<input class="ef-max" type="number" step="1" inputmode="numeric" value="${item.max}" placeholder="מקסימום"></label>
       <label class="full-span">צריכה ממוצעת לאורח (לתחזית)<input class="ef-perguest" type="number" step="any" inputmode="decimal" value="${item.perGuest||0}" placeholder="צריכה לאורח"></label>
-      ${meatRole
-        ? `<div class="full-span hint-text" style="background:var(--accent-tint);color:var(--accent-dark);font-weight:600;">🥩 פריט זה משויך למגשי בשר (${MEAT_ROLE_LABELS[meatRole]}) - הכמות מחושבת אוטומטית לפי הגדרות "מגשי בשר" במסך הבעלים, לא לפי אחוז מהאורחים.</div>`
+      ${trayAssoc
+        ? `<div class="full-span hint-text" style="background:var(--accent-tint);color:var(--accent-dark);font-weight:600;">${trayAssoc.emoji} פריט זה משויך ל${trayAssoc.label} - הכמות מחושבת אוטומטית לפי הגדרות "${trayAssoc.kind === 'buffet' ? 'מגשי בשר - בופה' : 'מגשי בשר'}" במסך הבעלים, לא לפי אחוז מהאורחים.</div>`
         : `<label class="full-span">אחוז מהאורחים שבוחרים בפריט זה (לתפריט מפוצל, לדוגמה: אנטריקוט 40%, פרגית 40%, דג/צמחוני 20%)<input class="ef-guestpercent" type="number" min="0" max="100" step="any" inputmode="decimal" value="${item.guestPercent!=null ? item.guestPercent : 100}" placeholder="100"></label>`}
       <label class="full-span">ברקוד (לא חובה)
         <div class="field-with-scan">
@@ -1747,19 +1797,31 @@ $all(".owner-tabs .tab-btn").forEach(btn=>{
 /* ---------- OWNER: EVENTS ---------- */
 function updateEvMeatPreview(){
   const previewEl = $("#ev-meat-preview");
+  const buffetRow = $("#ev-buffet-row");
   const category = $("#ev-category").value;
   const guests = parseInt($("#ev-guests").value, 10) || 0;
-  if (category !== "meat" || guests <= 0 || !meatDefaults){
+  buffetRow.classList.toggle("hidden", category !== "meat");
+  if (category !== "meat"){
+    $("#ev-includes-buffet").checked = false;
+  }
+  if (category !== "meat" || guests <= 0){
     previewEl.classList.add("hidden");
     return;
   }
-  const text = meatTrayPlanSummaryText(guests);
-  if (!text){ previewEl.classList.add("hidden"); return; }
-  previewEl.textContent = "🍽 תחזית מגשים אוטומטית לפי ברירת המחדל:\n" + text;
+  const parts = [];
+  const mainText = meatDefaults ? meatTrayPlanSummaryText(guests) : "";
+  if (mainText) parts.push("🍽 מנה עיקרית:\n" + mainText);
+  if ($("#ev-includes-buffet").checked && buffetDefaults){
+    const buffetText = buffetTrayPlanSummaryText(guests);
+    if (buffetText) parts.push("🥙 בופה:\n" + buffetText);
+  }
+  if (parts.length === 0){ previewEl.classList.add("hidden"); return; }
+  previewEl.textContent = "תחזית מגשים אוטומטית לפי ברירת המחדל:\n\n" + parts.join("\n\n");
   previewEl.classList.remove("hidden");
 }
 $("#ev-category").addEventListener("change", updateEvMeatPreview);
 $("#ev-guests").addEventListener("input", updateEvMeatPreview);
+$("#ev-includes-buffet").addEventListener("change", updateEvMeatPreview);
 
 function openAddEventSheet(){
   $("#add-event-sheet").classList.remove("hidden");
@@ -1771,6 +1833,7 @@ function closeAddEventSheet(){
   $("#add-event-form").reset();
   $("#ev-category").value = "meat";
   $("#ev-time").value = "evening";
+  $("#ev-includes-buffet").checked = false;
   $("#ev-meat-preview").classList.add("hidden");
 }
 $("#open-add-event-btn").addEventListener("click", openAddEventSheet);
@@ -1785,6 +1848,7 @@ $("#add-event-form").addEventListener("submit", (e)=>{
     timeOfDay: $("#ev-time").value,
     date: $("#ev-date").value,
     guests: parseInt($("#ev-guests").value, 10) || 0,
+    includesBuffet: $("#ev-category").value === "meat" && $("#ev-includes-buffet").checked,
     deducted: false
   };
   if (!ev.name || !ev.category || !ev.timeOfDay || !ev.date || !ev.guests){ showToast("יש למלא את כל השדות", true); return; }
@@ -1823,11 +1887,19 @@ function eventRowHtml(id, ev, opts){
       trayLine = `<div class="event-row-meta">🍽 ${plan.map(r=> `${r.label} ${r.trays}`).join(" · ")}</div>`;
     }
   }
+  let buffetLine = "";
+  if (ev.category === "meat" && ev.includesBuffet && buffetDefaults){
+    const bplan = computeBuffetTrayPlan(ev.guests).filter(r=> r.trays > 0);
+    if (bplan.length){
+      buffetLine = `<div class="event-row-meta">🥙 בופה: ${bplan.map(r=> `${r.label} ${r.trays}`).join(" · ")}</div>`;
+    }
+  }
   return `
     <div class="event-row-info">
       <div class="event-row-name">${escapeHtml(ev.name)}${catLabel ? ` <span class="event-cat-tag cat-${ev.category}">${catLabel}</span>` : ""}</div>
       <div class="event-row-meta">${dateStr}${timeLabel ? " · "+timeLabel : ""} · ${ev.guests} אורחים</div>
       ${trayLine}
+      ${buffetLine}
     </div>
     <div class="manage-row-actions">${actions.join("")}</div>
   `;
@@ -1886,6 +1958,10 @@ function eventEditFieldsTemplate(ev){
         </select>
       </label>
       <label>תאריך<input class="eev-date" type="date" value="${escapeAttr(ev.date)}"></label>
+      <div class="split-row full-span ${ev.category!=="meat" ? "hidden" : ""}" data-role="eev-buffet-wrap">
+        <input class="eev-includes-buffet" type="checkbox" style="width:20px;height:20px;flex:none;" ${ev.includesBuffet ? "checked" : ""}>
+        <span class="split-row-name">כולל בופה בכניסה (קובה/עראייס)</span>
+      </div>
       <label>מספר אורחים<input class="eev-guests" type="number" min="1" step="1" inputmode="numeric" value="${ev.guests}" placeholder="מספר אורחים"></label>
       <div class="full-span" style="display:flex;gap:8px;">
         <button type="button" class="btn-primary eev-save" style="flex:1;padding:9px;">שמור</button>
@@ -1896,13 +1972,19 @@ function eventEditFieldsTemplate(ev){
 }
 function wireEventEditRow(row, id){
   row.querySelector(".eev-cancel").addEventListener("click", ()=>{ editingEventId = null; renderEventsList(); });
+  row.querySelector(".eev-category").addEventListener("change", ()=>{
+    const isMeat = row.querySelector(".eev-category").value === "meat";
+    row.querySelector('[data-role="eev-buffet-wrap"]').classList.toggle("hidden", !isMeat);
+    if (!isMeat) row.querySelector(".eev-includes-buffet").checked = false;
+  });
   row.querySelector(".eev-save").addEventListener("click", ()=>{
     const updated = {
       name: row.querySelector(".eev-name").value.trim(),
       category: row.querySelector(".eev-category").value,
       timeOfDay: row.querySelector(".eev-time").value,
       date: row.querySelector(".eev-date").value,
-      guests: parseInt(row.querySelector(".eev-guests").value, 10) || 0
+      guests: parseInt(row.querySelector(".eev-guests").value, 10) || 0,
+      includesBuffet: row.querySelector(".eev-category").value === "meat" && row.querySelector(".eev-includes-buffet").checked
     };
     if (!updated.name || !updated.category || !updated.timeOfDay || !updated.date || !updated.guests){ showToast("יש למלא את כל השדות", true); return; }
     db.collection("events").doc(id).update(updated).then(()=>{
@@ -1914,14 +1996,29 @@ function wireEventEditRow(row, id){
 }
 
 /* ---------- OWNER: MEAT TRAY DEFAULTS SETTINGS ---------- */
+$all(".md-tabs .tab-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    $all(".md-tabs .tab-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    $("#md-tab-main").classList.toggle("hidden", btn.dataset.mdTab !== "main");
+    $("#md-tab-buffet").classList.toggle("hidden", btn.dataset.mdTab !== "buffet");
+  });
+});
 function populateMeatItemSelects(){
   const meatItems = Object.entries(itemsData)
     .filter(([id,it]) => it.category === "meat")
     .sort((a,b)=> (a[1].name||"").localeCompare(b[1].name||"", "he"));
+  const optionsHtml = `<option value="">בחרו פריט...</option>` + meatItems.map(([id,it])=>`<option value="${id}">${escapeHtml(it.name)}</option>`).join("");
   ["pargit","entrecote","beef","asado"].forEach(role=>{
     const sel = $(`#md-item-${role}`);
     const current = sel.value;
-    sel.innerHTML = `<option value="">בחרו פריט...</option>` + meatItems.map(([id,it])=>`<option value="${id}">${escapeHtml(it.name)}</option>`).join("");
+    sel.innerHTML = optionsHtml;
+    sel.value = current || "";
+  });
+  ["kubeh","araayes"].forEach(role=>{
+    const sel = $(`#md-buffet-item-${role}`);
+    const current = sel.value;
+    sel.innerHTML = optionsHtml;
     sel.value = current || "";
   });
 }
@@ -1936,6 +2033,17 @@ function checkMeatMixTotal(){
   }
 }
 ["#md-mix-pargit","#md-mix-entrecote","#md-mix-beef","#md-mix-asado"].forEach(sel=> $(sel).addEventListener("input", checkMeatMixTotal));
+function checkBuffetMixTotal(){
+  const total = (parseFloat($("#md-buffet-mix-kubeh").value)||0) + (parseFloat($("#md-buffet-mix-araayes").value)||0);
+  const warnEl = $("#md-buffet-mix-total-warn");
+  if (Math.round(total) !== 100){
+    warnEl.textContent = `שימו לב: סכום האחוזים הוא ${fmtNum(total)}%, לא 100%.`;
+    warnEl.classList.remove("hidden");
+  } else {
+    warnEl.classList.add("hidden");
+  }
+}
+["#md-buffet-mix-kubeh","#md-buffet-mix-araayes"].forEach(sel=> $(sel).addEventListener("input", checkBuffetMixTotal));
 
 function openMeatDefaultsSheet(){
   populateMeatItemSelects();
@@ -1951,6 +2059,16 @@ function openMeatDefaultsSheet(){
   $("#md-item-beef").value = d.itemBeef || "";
   $("#md-item-asado").value = d.itemAsado || "";
   checkMeatMixTotal();
+
+  const bd = buffetDefaults || {};
+  $("#md-buffet-tray-capacity").value = bd.trayCapacityKg != null ? bd.trayCapacityKg : 3.5;
+  $("#md-buffet-guest-meat").value = bd.guestMeatKg != null ? bd.guestMeatKg : 0.17;
+  $("#md-buffet-mix-kubeh").value = bd.mixKubeh != null ? bd.mixKubeh : 50;
+  $("#md-buffet-mix-araayes").value = bd.mixAraayes != null ? bd.mixAraayes : 50;
+  $("#md-buffet-item-kubeh").value = bd.itemKubeh || "";
+  $("#md-buffet-item-araayes").value = bd.itemAraayes || "";
+  checkBuffetMixTotal();
+
   $("#meat-defaults-sheet").classList.remove("hidden");
 }
 function closeMeatDefaultsSheet(){
@@ -1974,8 +2092,24 @@ $("#meat-defaults-form").addEventListener("submit", (e)=>{
     itemAsado: $("#md-item-asado").value || ""
   };
   db.collection("settings").doc("meatDefaults").set(data).then(()=>{
-    showToast("הגדרות מגשי הבשר נשמרו");
-    closeMeatDefaultsSheet();
+    showToast("הגדרות מנה עיקרית נשמרו");
+  }).catch(err=>{
+    console.error(err);
+    showToast("שגיאה בשמירת ההגדרות", true);
+  });
+});
+$("#buffet-defaults-form").addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const data = {
+    trayCapacityKg: parseFloat($("#md-buffet-tray-capacity").value) || 0,
+    guestMeatKg: parseFloat($("#md-buffet-guest-meat").value) || 0,
+    mixKubeh: parseFloat($("#md-buffet-mix-kubeh").value) || 0,
+    mixAraayes: parseFloat($("#md-buffet-mix-araayes").value) || 0,
+    itemKubeh: $("#md-buffet-item-kubeh").value || "",
+    itemAraayes: $("#md-buffet-item-araayes").value || ""
+  };
+  db.collection("settings").doc("buffetDefaults").set(data).then(()=>{
+    showToast("הגדרות בופה נשמרו");
   }).catch(err=>{
     console.error(err);
     showToast("שגיאה בשמירת ההגדרות", true);
@@ -2036,6 +2170,34 @@ function meatTrayPlanSummaryText(guestCount){
   }).join("\n");
 }
 
+/* ---------- BUFFET TRAY PLAN (קובה/עראייס בכניסה) ---------- */
+/* אותו עיקרון בדיוק כמו מגשי המנה העיקרית, אבל עם קיבולת מגש, כמות לאורח ותמהיל נפרדים -
+   כי מגש בופה שונה בגודל ובסוגים ממגש המנה העיקרית. חל רק על אירועים עם includesBuffet=true. */
+function computeBuffetTrayPlan(guestCount){
+  if (!buffetDefaults) return [];
+  const trayCap = Number(buffetDefaults.trayCapacityKg) || 0;
+  const guestMeatKg = Number(buffetDefaults.guestMeatKg) || 0;
+  const totalKg = Number(guestCount||0) * guestMeatKg;
+  const roles = [
+    { role:"kubeh", pct: Number(buffetDefaults.mixKubeh)||0, itemId: buffetDefaults.itemKubeh||"" },
+    { role:"araayes", pct: Number(buffetDefaults.mixAraayes)||0, itemId: buffetDefaults.itemAraayes||"" }
+  ];
+  return roles.map(r=>{
+    const kg = totalKg * (r.pct/100);
+    const trays = trayCap > 0 ? Math.ceil(kg / trayCap) : 0;
+    const deductKg = trays * trayCap;
+    return { role:r.role, label: BUFFET_ROLE_LABELS[r.role], itemId: r.itemId, pct: r.pct, kg, trays, deductKg };
+  });
+}
+function buffetTrayPlanSummaryText(guestCount){
+  const plan = computeBuffetTrayPlan(guestCount);
+  if (plan.length === 0) return "";
+  return plan.map(r=>{
+    const itemName = r.itemId && itemsData[r.itemId] ? itemsData[r.itemId].name : `(${r.label} - לא משויך פריט)`;
+    return `${r.label}: ${r.trays} מגשים (${fmtNum(r.deductKg)} ק"ג) · ${itemName}`;
+  }).join("\n");
+}
+
 /* ---------- OWNER: AUTOMATIC INVENTORY DEDUCTION PER EVENT ---------- */
 /* מחשב לכל פריט עם "צריכה לאורח" מוגדרת, שרלוונטי לסוג האירוע, כמה יש להוריד מהמלאי */
 function computeEventDeduction(ev){
@@ -2045,6 +2207,14 @@ function computeEventDeduction(ev){
     computeMeatTrayPlan(ev.guests).forEach(r=>{
       if (r.itemId && itemsData[r.itemId] && r.deductKg > 0){
         rows.push({ id:r.itemId, it: itemsData[r.itemId], amount: r.deductKg, trays: r.trays, roleLabel: r.label });
+        usedItemIds.add(r.itemId);
+      }
+    });
+  }
+  if (ev.category === "meat" && ev.includesBuffet && buffetDefaults){
+    computeBuffetTrayPlan(ev.guests).forEach(r=>{
+      if (r.itemId && itemsData[r.itemId] && r.deductKg > 0 && !usedItemIds.has(r.itemId)){
+        rows.push({ id:r.itemId, it: itemsData[r.itemId], amount: r.deductKg, trays: r.trays, roleLabel: `בופה - ${r.label}` });
         usedItemIds.add(r.itemId);
       }
     });
