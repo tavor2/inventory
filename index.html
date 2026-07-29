@@ -252,6 +252,7 @@ button{cursor:pointer;}
 .status-dot.status-low{background:var(--danger);}
 .status-dot.status-ok{background:var(--good);}
 .status-dot.status-high{background:var(--warn);}
+.meat-role-tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--accent-tint);color:var(--accent-dark);vertical-align:middle;white-space:nowrap;}
 .mini-gauge{width:70px;height:5px;border-radius:99px;background:var(--border);margin-top:6px;overflow:hidden;position:relative;}
 .mini-gauge-fill{height:100%;border-radius:99px;}
 .empty-state{color:var(--ink-faint);font-size:14px;text-align:center;padding:30px 20px;}
@@ -819,12 +820,14 @@ button{cursor:pointer;}
         <div class="split-row"><span class="split-row-name">פרגית</span><input id="md-mix-pargit" type="number" min="0" max="100" step="any" class="split-row-input" value="40"><span class="split-row-pct">%</span></div>
         <div class="split-row"><span class="split-row-name">אנטריקוט</span><input id="md-mix-entrecote" type="number" min="0" max="100" step="any" class="split-row-input" value="35"><span class="split-row-pct">%</span></div>
         <div class="split-row"><span class="split-row-name">בקר/צלי</span><input id="md-mix-beef" type="number" min="0" max="100" step="any" class="split-row-input" value="25"><span class="split-row-pct">%</span></div>
+        <div class="split-row"><span class="split-row-name">אסאדו</span><input id="md-mix-asado" type="number" min="0" max="100" step="any" class="split-row-input" value="0"><span class="split-row-pct">%</span></div>
       </div>
       <p id="md-mix-total-warn" class="hint-text hidden" style="color:var(--danger);"></p>
       <p class="hint-text">שיוך לפריטי מלאי בפועל (כדי שהמערכת תדע מאיזה פריט להוריד מלאי):</p>
       <label>פריט לפרגית<select id="md-item-pargit"></select></label>
       <label>פריט לאנטריקוט<select id="md-item-entrecote"></select></label>
       <label>פריט לבקר/צלי<select id="md-item-beef"></select></label>
+      <label>פריט לאסאדו<select id="md-item-asado"></select></label>
       <button type="submit" class="btn-primary full">שמור הגדרות</button>
     </form>
     <button id="meat-defaults-close" class="btn-ghost full close-manage">סגירה</button>
@@ -857,7 +860,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.17 - 2026-07-30";
+const APP_VERSION = "3.19 - 2026-07-30";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -894,12 +897,13 @@ function stripDecimalLive(el){
 let itemsData = {};   // id -> item
 let eventsData = {};  // id -> event
 let meatDefaults = null; // הגדרות ברירת מחדל למגשי בשר (פרגית/אנטריקוט/בקר) - נטען מ-settings/meatDefaults
-const MEAT_ROLE_LABELS = { pargit:"פרגית", entrecote:"אנטריקוט", beef:"בקר/צלי" };
+const MEAT_ROLE_LABELS = { pargit:"פרגית", entrecote:"אנטריקוט", beef:"בקר/צלי", asado:"אסאדו" };
 function getMeatRoleForItem(id){
   if (!meatDefaults || !id) return null;
   if (meatDefaults.itemPargit === id) return "pargit";
   if (meatDefaults.itemEntrecote === id) return "entrecote";
   if (meatDefaults.itemBeef === id) return "beef";
+  if (meatDefaults.itemAsado === id) return "asado";
   return null;
 }
 let currentRole = null; // 'warehouse' | 'owner'
@@ -1073,11 +1077,12 @@ function getFilteredItems(searchVal, cat){
 function buildItemCard(id, item, readOnly){
   const status = itemStatus(item);
   const pct = gaugePercent(item);
+  const meatRole = getMeatRoleForItem(id);
   const card = document.createElement("div");
   card.className = `item-card cat-${item.category}` + (readOnly ? " read-only" : "");
   card.innerHTML = `
     <div class="item-card-main">
-      <div class="item-card-name"><span class="status-dot status-${status}"></span>${escapeHtml(item.name)}</div>
+      <div class="item-card-name"><span class="status-dot status-${status}"></span>${escapeHtml(item.name)}${meatRole ? ` <span class="meat-role-tag">🥩 ${MEAT_ROLE_LABELS[meatRole]}</span>` : ""}</div>
       <div class="item-card-unit">${escapeHtml(item.unit)} · מינ׳ ${fmtNum(item.min)} · מקס׳ ${fmtNum(item.max)}</div>
       <div class="mini-gauge"><div class="mini-gauge-fill" style="width:${pct}%;background:${statusColorVar(status)}"></div></div>
     </div>
@@ -1913,7 +1918,7 @@ function populateMeatItemSelects(){
   const meatItems = Object.entries(itemsData)
     .filter(([id,it]) => it.category === "meat")
     .sort((a,b)=> (a[1].name||"").localeCompare(b[1].name||"", "he"));
-  ["pargit","entrecote","beef"].forEach(role=>{
+  ["pargit","entrecote","beef","asado"].forEach(role=>{
     const sel = $(`#md-item-${role}`);
     const current = sel.value;
     sel.innerHTML = `<option value="">בחרו פריט...</option>` + meatItems.map(([id,it])=>`<option value="${id}">${escapeHtml(it.name)}</option>`).join("");
@@ -1921,7 +1926,7 @@ function populateMeatItemSelects(){
   });
 }
 function checkMeatMixTotal(){
-  const total = (parseFloat($("#md-mix-pargit").value)||0) + (parseFloat($("#md-mix-entrecote").value)||0) + (parseFloat($("#md-mix-beef").value)||0);
+  const total = (parseFloat($("#md-mix-pargit").value)||0) + (parseFloat($("#md-mix-entrecote").value)||0) + (parseFloat($("#md-mix-beef").value)||0) + (parseFloat($("#md-mix-asado").value)||0);
   const warnEl = $("#md-mix-total-warn");
   if (Math.round(total) !== 100){
     warnEl.textContent = `שימו לב: סכום האחוזים הוא ${fmtNum(total)}%, לא 100%.`;
@@ -1930,7 +1935,7 @@ function checkMeatMixTotal(){
     warnEl.classList.add("hidden");
   }
 }
-["#md-mix-pargit","#md-mix-entrecote","#md-mix-beef"].forEach(sel=> $(sel).addEventListener("input", checkMeatMixTotal));
+["#md-mix-pargit","#md-mix-entrecote","#md-mix-beef","#md-mix-asado"].forEach(sel=> $(sel).addEventListener("input", checkMeatMixTotal));
 
 function openMeatDefaultsSheet(){
   populateMeatItemSelects();
@@ -1940,9 +1945,11 @@ function openMeatDefaultsSheet(){
   $("#md-mix-pargit").value = d.mixPargit != null ? d.mixPargit : 40;
   $("#md-mix-entrecote").value = d.mixEntrecote != null ? d.mixEntrecote : 35;
   $("#md-mix-beef").value = d.mixBeef != null ? d.mixBeef : 25;
+  $("#md-mix-asado").value = d.mixAsado != null ? d.mixAsado : 0;
   $("#md-item-pargit").value = d.itemPargit || "";
   $("#md-item-entrecote").value = d.itemEntrecote || "";
   $("#md-item-beef").value = d.itemBeef || "";
+  $("#md-item-asado").value = d.itemAsado || "";
   checkMeatMixTotal();
   $("#meat-defaults-sheet").classList.remove("hidden");
 }
@@ -1960,9 +1967,11 @@ $("#meat-defaults-form").addEventListener("submit", (e)=>{
     mixPargit: parseFloat($("#md-mix-pargit").value) || 0,
     mixEntrecote: parseFloat($("#md-mix-entrecote").value) || 0,
     mixBeef: parseFloat($("#md-mix-beef").value) || 0,
+    mixAsado: parseFloat($("#md-mix-asado").value) || 0,
     itemPargit: $("#md-item-pargit").value || "",
     itemEntrecote: $("#md-item-entrecote").value || "",
-    itemBeef: $("#md-item-beef").value || ""
+    itemBeef: $("#md-item-beef").value || "",
+    itemAsado: $("#md-item-asado").value || ""
   };
   db.collection("settings").doc("meatDefaults").set(data).then(()=>{
     showToast("הגדרות מגשי הבשר נשמרו");
@@ -2008,7 +2017,8 @@ function computeMeatTrayPlan(guestCount){
   const roles = [
     { role:"pargit", pct: Number(meatDefaults.mixPargit)||0, itemId: meatDefaults.itemPargit||"" },
     { role:"entrecote", pct: Number(meatDefaults.mixEntrecote)||0, itemId: meatDefaults.itemEntrecote||"" },
-    { role:"beef", pct: Number(meatDefaults.mixBeef)||0, itemId: meatDefaults.itemBeef||"" }
+    { role:"beef", pct: Number(meatDefaults.mixBeef)||0, itemId: meatDefaults.itemBeef||"" },
+    { role:"asado", pct: Number(meatDefaults.mixAsado)||0, itemId: meatDefaults.itemAsado||"" }
   ];
   return roles.map(r=>{
     const kg = totalKg * (r.pct/100);
