@@ -857,7 +857,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.16 - 2026-07-29";
+const APP_VERSION = "3.17 - 2026-07-30";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -895,6 +895,13 @@ let itemsData = {};   // id -> item
 let eventsData = {};  // id -> event
 let meatDefaults = null; // הגדרות ברירת מחדל למגשי בשר (פרגית/אנטריקוט/בקר) - נטען מ-settings/meatDefaults
 const MEAT_ROLE_LABELS = { pargit:"פרגית", entrecote:"אנטריקוט", beef:"בקר/צלי" };
+function getMeatRoleForItem(id){
+  if (!meatDefaults || !id) return null;
+  if (meatDefaults.itemPargit === id) return "pargit";
+  if (meatDefaults.itemEntrecote === id) return "entrecote";
+  if (meatDefaults.itemBeef === id) return "beef";
+  return null;
+}
 let currentRole = null; // 'warehouse' | 'owner'
 let pendingRole = null;
 let activeQtyItemId = null;
@@ -1343,14 +1350,14 @@ function renderManageList(){
     const row = document.createElement("div");
     row.className = `manage-row cat-${item.category}`;
     if (editingItemId === id){
-      row.innerHTML = editFieldsTemplate(item);
+      row.innerHTML = editFieldsTemplate(item, id);
       container.appendChild(row);
       wireEditRow(row, id);
     } else {
       row.innerHTML = `
         <div class="manage-row-info">
           <div class="manage-row-name">${escapeHtml(item.name)}</div>
-          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${(item.guestPercent!=null && Number(item.guestPercent)!==100) ? " ("+fmtNum(item.guestPercent)+"% מהאורחים)" : ""}${item.packageSize ? " · "+escapeHtml(item.packageLabel||"אריזה")+": "+(item.packageUnitsCount ? fmtNum(item.packageUnitsCount)+"×"+fmtNum(item.packageUnitAmount||1)+"=" : "")+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
+          <div class="manage-row-meta">${CATEGORY_LABELS[item.category]} · ${escapeHtml(item.unit)} · מלאי ${fmtNum(item.stock)} · מינ׳${fmtNum(item.min)}/מקס׳${fmtNum(item.max)} · צריכה/אורח ${fmtNum(item.perGuest||0)}${getMeatRoleForItem(id) ? ` · 🥩 מגשי בשר (${MEAT_ROLE_LABELS[getMeatRoleForItem(id)]})` : (item.guestPercent!=null && Number(item.guestPercent)!==100) ? " ("+fmtNum(item.guestPercent)+"% מהאורחים)" : ""}${item.packageSize ? " · "+escapeHtml(item.packageLabel||"אריזה")+": "+(item.packageUnitsCount ? fmtNum(item.packageUnitsCount)+"×"+fmtNum(item.packageUnitAmount||1)+"=" : "")+fmtNum(item.packageSize)+" "+escapeHtml(item.unit) : ""}${item.barcode ? " · ברקוד: "+escapeHtml(item.barcode) : ""}</div>
         </div>
         <div class="manage-row-actions">
           <button class="mini-btn edit" data-edit="${id}" title="עריכה">✎</button>
@@ -1373,8 +1380,9 @@ function renderManageList(){
 
 const UNIT_OPTIONS = ['ק"ג','גרם','יחידה','ארגז','בקבוק','ליטר','קרטון'];
 const PACKAGE_LABEL_OPTIONS = ['ארגז','קרטון','שישיה','חבית','מגש','שקית','ניילון'];
-function editFieldsTemplate(item){
+function editFieldsTemplate(item, id){
   const isKnownUnit = UNIT_OPTIONS.includes(item.unit);
+  const meatRole = getMeatRoleForItem(id);
   return `
     <div class="edit-fields">
       <label>שם המוצר<input class="ef-name" value="${escapeAttr(item.name)}" placeholder="שם"></label>
@@ -1414,7 +1422,9 @@ function editFieldsTemplate(item){
       <label>מינימום<input class="ef-min" type="number" step="1" inputmode="numeric" value="${item.min}" placeholder="מינימום"></label>
       <label>מקסימום<input class="ef-max" type="number" step="1" inputmode="numeric" value="${item.max}" placeholder="מקסימום"></label>
       <label class="full-span">צריכה ממוצעת לאורח (לתחזית)<input class="ef-perguest" type="number" step="any" inputmode="decimal" value="${item.perGuest||0}" placeholder="צריכה לאורח"></label>
-      <label class="full-span">אחוז מהאורחים שבוחרים בפריט זה (לתפריט מפוצל, לדוגמה: אנטריקוט 40%, פרגית 40%, דג/צמחוני 20%)<input class="ef-guestpercent" type="number" min="0" max="100" step="any" inputmode="decimal" value="${item.guestPercent!=null ? item.guestPercent : 100}" placeholder="100"></label>
+      ${meatRole
+        ? `<div class="full-span hint-text" style="background:var(--accent-tint);color:var(--accent-dark);font-weight:600;">🥩 פריט זה משויך למגשי בשר (${MEAT_ROLE_LABELS[meatRole]}) - הכמות מחושבת אוטומטית לפי הגדרות "מגשי בשר" במסך הבעלים, לא לפי אחוז מהאורחים.</div>`
+        : `<label class="full-span">אחוז מהאורחים שבוחרים בפריט זה (לתפריט מפוצל, לדוגמה: אנטריקוט 40%, פרגית 40%, דג/צמחוני 20%)<input class="ef-guestpercent" type="number" min="0" max="100" step="any" inputmode="decimal" value="${item.guestPercent!=null ? item.guestPercent : 100}" placeholder="100"></label>`}
       <label class="full-span">ברקוד (לא חובה)
         <div class="field-with-scan">
           <input class="ef-barcode" value="${escapeAttr(item.barcode||'')}" placeholder="ברקוד">
@@ -1486,7 +1496,15 @@ function wireEditRow(row, id){
       min: roundForUnit(row.querySelector(".ef-min").value, unit),
       max: roundForUnit(row.querySelector(".ef-max").value, unit),
       perGuest: parseFloat(row.querySelector(".ef-perguest").value)||0,
-      guestPercent: (()=>{ const v = parseFloat(row.querySelector(".ef-guestpercent").value); return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 100; })(),
+      guestPercent: (()=>{
+        const gpInput = row.querySelector(".ef-guestpercent");
+        if (!gpInput){
+          const existing = itemsData[id];
+          return existing && existing.guestPercent != null ? existing.guestPercent : 100;
+        }
+        const v = parseFloat(gpInput.value);
+        return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 100;
+      })(),
       packageUnitsCount: Math.round(pkgUnits),
       packageUnitAmount: pkgUnitAmount,
       packageSize: roundForUnit(pkgUnits * pkgUnitAmount, unit),
