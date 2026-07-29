@@ -892,7 +892,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.21 - 2026-07-31";
+const APP_VERSION = "3.22 - 2026-07-31";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -2141,6 +2141,28 @@ function neededForEvents(events, item){
   const guests = events.reduce((sum,[id,ev])=> categoryAppliesToEvent(item.category, ev.category) ? sum + (Number(ev.guests)||0) : sum, 0);
   return guests * (itemGuestPercent(item)/100) * Number(item.perGuest||0);
 }
+/* גרסה מודעת-מגשים של neededForEvents - לפריטים ששויכו למגש (מנה עיקרית ו/או בופה), מחשבת
+   לפי אותו מנגנון מגשים מעוגל-למעלה שבאמת רץ בניכוי בפועל (📉), ולא לפי "צריכה לאורח" הישן.
+   לפריטים לא-משויכים, מתנהגת בדיוק כמו neededForEvents הרגילה. */
+function isTrayManagedItem(itemId){
+  if (meatDefaults && [meatDefaults.itemPargit, meatDefaults.itemEntrecote, meatDefaults.itemBeef, meatDefaults.itemAsado].includes(itemId)) return true;
+  if (buffetDefaults && buffetDefaults.itemAraayes === itemId) return true;
+  return false;
+}
+function neededForEventsTrayAware(events, itemId, item){
+  if (!isTrayManagedItem(itemId)) return neededForEvents(events, item);
+  let total = 0;
+  events.forEach(([id,ev])=>{
+    if (ev.category !== "meat") return;
+    if (meatDefaults){
+      computeMeatTrayPlan(ev.guests).forEach(r=>{ if (r.itemId === itemId) total += r.deductKg; });
+    }
+    if (ev.includesBuffet && buffetDefaults){
+      computeBuffetTrayPlan(ev.guests).forEach(r=>{ if (r.itemId === itemId) total += r.deductKg; });
+    }
+  });
+  return total;
+}
 
 /* ---------- MEAT TRAY PLAN (פרגית/אנטריקוט/בקר) ---------- */
 /* לפי מספר האורחים, מחשב לכל אחד משלושת סוגי הבשר: כמה ק"ג מדויק דרוש,
@@ -2287,10 +2309,13 @@ function renderForecastList(containerId, emptyId, rows){
   $(emptyId).classList.add("hidden");
   rows
     .sort((a,b)=> (b.short - a.short) || (b.needed - a.needed))
-    .forEach(({it, needed, available, short})=>{
+    .forEach(({id, it, needed, available, short})=>{
       const row = document.createElement("div");
       row.className = "forecast-row" + (short ? " short" : "");
-      const pctNote = (it.guestPercent!=null && Number(it.guestPercent)!==100) ? ` (${fmtNum(it.guestPercent)}% מהאורחים)` : "";
+      const trayAssoc = getTrayAssociation(id);
+      const pctNote = trayAssoc
+        ? ` (${trayAssoc.emoji} לפי מגשים)`
+        : (it.guestPercent!=null && Number(it.guestPercent)!==100) ? ` (${fmtNum(it.guestPercent)}% מהאורחים)` : "";
       row.innerHTML = `
         <div>
           <div class="forecast-row-name">${escapeHtml(it.name)}${pctNote}</div>
@@ -2308,19 +2333,19 @@ function renderForecast(){
   const thisWeekEvents = getEventsInRange(today, weekEnd1);
   const nextWeekEvents = getEventsInRange(weekEnd1, weekEnd2);
 
-  const relevant = Object.entries(itemsData).filter(([id,it])=> Number(it.perGuest) > 0);
+  const relevant = Object.entries(itemsData).filter(([id,it])=> Number(it.perGuest) > 0 || isTrayManagedItem(id));
 
   const rowsThis = [];
   const rowsNext = [];
   relevant.forEach(([id,it])=>{
-    const neededThis = neededForEvents(thisWeekEvents, it);
-    const neededNext = neededForEvents(nextWeekEvents, it);
+    const neededThis = neededForEventsTrayAware(thisWeekEvents, id, it);
+    const neededNext = neededForEventsTrayAware(nextWeekEvents, id, it);
     const stockAfterThis = Number(it.stock) - neededThis;
     if (neededThis > 0){
-      rowsThis.push({it, needed: neededThis, available: Number(it.stock), short: neededThis > Number(it.stock)});
+      rowsThis.push({id, it, needed: neededThis, available: Number(it.stock), short: neededThis > Number(it.stock)});
     }
     if (neededNext > 0){
-      rowsNext.push({it, needed: neededNext, available: stockAfterThis, short: neededNext > stockAfterThis});
+      rowsNext.push({id, it, needed: neededNext, available: stockAfterThis, short: neededNext > stockAfterThis});
     }
   });
 
@@ -2403,10 +2428,10 @@ function generateReport(){
 
       const forecastRows = [];
       Object.entries(itemsData).forEach(([id,it])=>{
-        if (!(Number(it.perGuest) > 0)) return;
-        const needed = neededForEvents(futureEvents, it);
+        if (!(Number(it.perGuest) > 0 || isTrayManagedItem(id))) return;
+        const needed = neededForEventsTrayAware(futureEvents, id, it);
         if (needed > 0){
-          forecastRows.push({it, needed, available: Number(it.stock), short: needed > Number(it.stock)});
+          forecastRows.push({id, it, needed, available: Number(it.stock), short: needed > Number(it.stock)});
         }
       });
 
