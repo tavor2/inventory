@@ -939,7 +939,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.25 - 2026-07-30";
+const APP_VERSION = "3.26 - 2026-07-30";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -2941,6 +2941,32 @@ document.addEventListener("focusin", (e)=>{
     e.target.select();
   }
 });
+
+/* ---------- כפתור "חזרה" של המכשיר: אם יש שכבה פתוחה (sheet) - סוגר אותה קודם;
+   אחרת דורש לחיצה נוספת תוך 2 שניות כדי לצאת בפועל מהאפליקציה, במקום לצאת מיד. ---------- */
+(function(){
+  let exitArmed = false;
+  let exitArmTimer = null;
+  history.pushState({appGuard:true}, "");
+  window.addEventListener("popstate", function(){
+    const openSheet = document.querySelector(".sheet:not(.hidden)");
+    if (openSheet){
+      openSheet.classList.add("hidden");
+      history.pushState({appGuard:true}, "");
+      exitArmed = false;
+      clearTimeout(exitArmTimer);
+      return;
+    }
+    if (!exitArmed){
+      exitArmed = true;
+      history.pushState({appGuard:true}, "");
+      showToast("לחצו שוב על 'חזרה' כדי לצאת מהאפליקציה");
+      clearTimeout(exitArmTimer);
+      exitArmTimer = setTimeout(()=>{ exitArmed = false; }, 2000);
+    }
+    /* אם exitArmed כבר היה true - לא עושים pushState נוסף, כך שהלחיצה השנייה תוך הזמן הזה באמת יוצאת */
+  });
+})();
 
 /* ---------- INIT ---------- */
 window.addEventListener("DOMContentLoaded", ()=>{
