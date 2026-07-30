@@ -681,7 +681,7 @@ button{cursor:pointer;}
   <header class="topbar">
     <div class="topbar-title"><span class="brand-dot small"></span><span>מסך אירועים</span></div>
     <div class="topbar-actions">
-      <button id="ow-meat-defaults-btn" class="icon-btn" title="הגדרות מגשי בשר"><span class="btn-emoji">🥩</span><span>מגשי בשר</span></button>
+      <button id="ow-manage-btn" class="icon-btn" title="ניהול מערכת"><span class="btn-emoji">⚙️</span><span>ניהול</span></button>
       <button id="ow-logout-btn" class="icon-btn icon-logout" title="יציאה"><span class="btn-emoji">🚪</span><span>יציאה</span></button>
     </div>
   </header>
@@ -809,6 +809,49 @@ button{cursor:pointer;}
   </div>
 </div>
 
+<!-- Owner management hub sheet -->
+<div id="owner-manage-sheet" class="sheet hidden">
+  <div class="sheet-backdrop" id="owner-manage-backdrop"></div>
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <h3>ניהול מערכת</h3>
+    <p class="sheet-meta">הגדרות כלליות ופעולות תחזוקה.</p>
+    <div class="form-grid" style="margin-bottom:16px;">
+      <button type="button" id="open-meat-defaults-from-manage" class="btn-ghost full" style="text-align:right;padding:16px;display:flex;align-items:center;gap:10px;font-size:15px;">
+        <span style="font-size:19px;">🥩</span><span>ניהול מגשי בשר ובופה</span>
+      </button>
+      <button type="button" id="open-backup-reset-btn" class="btn-ghost full" style="text-align:right;padding:16px;display:flex;align-items:center;gap:10px;font-size:15px;">
+        <span style="font-size:19px;">🗄️</span><span>גיבוי ואיפוס נתונים</span>
+      </button>
+    </div>
+    <button id="owner-manage-close" class="btn-ghost full close-manage">סגירה</button>
+  </div>
+</div>
+
+<!-- Backup & reset sheet -->
+<div id="backup-reset-sheet" class="sheet hidden">
+  <div class="sheet-backdrop" id="backup-reset-backdrop"></div>
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <h3>גיבוי ואיפוס נתונים</h3>
+    <p class="hint-text">מומלץ להוריד גיבוי לפני כל איפוס. הגיבוי כולל את כל הנתונים הנוכחיים: פריטי מלאי, אירועים, יומן תנועות מלאי (stockLog), והגדרות תמהיל מגשי הבשר/בופה.</p>
+    <button id="br-backup-btn" class="btn-primary full" type="button">⬇️ הורדת גיבוי מלא (JSON)</button>
+
+    <div style="height:18px;"></div>
+    <p class="hint-text" style="background:var(--danger-tint);color:var(--danger);">
+      ⚠ האיפוס ימחק לצמיתות את כל <b>האירועים</b> ואת כל <b>יומן תנועות המלאי</b> בלבד.<br>
+      פריטי המלאי (כולל הכמויות שבמחסן) והגדרות תמהיל מגשי הבשר/בופה <b>לא</b> יימחקו ולא ישתנו - מתאים לאיפוס לפני עלייה לפרודקשן בלי לאבד את ההגדרות שכיילתם.
+    </p>
+    <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:14px;">
+      להמשך, הקלידו כאן "איפוס"
+      <input id="br-confirm-input" type="text" placeholder='הקלידו "איפוס"'>
+    </label>
+    <button id="br-reset-btn" class="btn-primary full" type="button" style="background:linear-gradient(180deg,var(--danger),#a52d1c);">🗑️ איפוס אירועים ותנועות מלאי</button>
+    <p id="br-status" class="scan-status"></p>
+    <button id="backup-reset-close" class="btn-ghost full close-manage">סגירה</button>
+  </div>
+</div>
+
 <!-- Meat tray defaults settings sheet -->
 <div id="meat-defaults-sheet" class="sheet hidden">
   <div class="sheet-backdrop" id="meat-defaults-backdrop"></div>
@@ -896,7 +939,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.24 - 2026-07-30";
+const APP_VERSION = "3.25 - 2026-07-30";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -2276,7 +2319,17 @@ function openMeatDefaultsSheet(){
 function closeMeatDefaultsSheet(){
   $("#meat-defaults-sheet").classList.add("hidden");
 }
-$("#ow-meat-defaults-btn").addEventListener("click", openMeatDefaultsSheet);
+$("#ow-manage-btn").addEventListener("click", ()=> $("#owner-manage-sheet").classList.remove("hidden"));
+$("#owner-manage-close").addEventListener("click", ()=> $("#owner-manage-sheet").classList.add("hidden"));
+$("#owner-manage-backdrop").addEventListener("click", ()=> $("#owner-manage-sheet").classList.add("hidden"));
+$("#open-meat-defaults-from-manage").addEventListener("click", ()=>{
+  $("#owner-manage-sheet").classList.add("hidden");
+  openMeatDefaultsSheet();
+});
+$("#open-backup-reset-btn").addEventListener("click", ()=>{
+  $("#owner-manage-sheet").classList.add("hidden");
+  openBackupResetSheet();
+});
 $("#meat-defaults-close").addEventListener("click", closeMeatDefaultsSheet);
 $("#meat-defaults-backdrop").addEventListener("click", closeMeatDefaultsSheet);
 $("#meat-defaults-form").addEventListener("submit", (e)=>{
@@ -2324,6 +2377,112 @@ $("#buffet-defaults-form").addEventListener("submit", (e)=>{
     console.error(err);
     showToast("שגיאה בשמירת ההגדרות", true);
   });
+});
+
+/* ---------- OWNER: BACKUP & RESET ---------- */
+/* גיבוי מלא של כל הנתונים (פריטים, אירועים, יומן תנועות מלאי, הגדרות תמהילים) כקובץ JSON להורדה.
+   איפוס מוחק לצמיתות רק אירועים ויומן תנועות מלאי - לא נוגע בפריטי המלאי ולא בהגדרות התמהיל,
+   כך שאפשר לאפס "נתוני בדיקות" לפני עלייה לפרודקשן בלי לאבד את כיול הפריטים/המגשים. */
+function openBackupResetSheet(){
+  $("#br-confirm-input").value = "";
+  $("#br-status").textContent = "";
+  $("#br-reset-btn").disabled = false;
+  $("#backup-reset-sheet").classList.remove("hidden");
+}
+function closeBackupResetSheet(){
+  $("#backup-reset-sheet").classList.add("hidden");
+}
+$("#backup-reset-close").addEventListener("click", closeBackupResetSheet);
+$("#backup-reset-backdrop").addEventListener("click", closeBackupResetSheet);
+
+function downloadJsonFile(filename, dataObj){
+  const jsonStr = JSON.stringify(dataObj, null, 2);
+  const blob = new Blob([jsonStr], {type:"application/json;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+$("#br-backup-btn").addEventListener("click", ()=>{
+  if (!db){ showToast("אין חיבור למסד הנתונים", true); return; }
+  const btn = $("#br-backup-btn");
+  btn.disabled = true;
+  btn.textContent = "מכין גיבוי...";
+  db.collection("stockLog").get().then(snap=>{
+    const stockLog = [];
+    snap.forEach(doc=>{
+      const d = doc.data();
+      stockLog.push({
+        id: doc.id, ...d,
+        timestamp: (d.timestamp && typeof d.timestamp.toDate === "function") ? d.timestamp.toDate().toISOString() : null
+      });
+    });
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      appVersion: APP_VERSION,
+      items: Object.entries(itemsData).map(([id,it])=> ({id, ...it})),
+      events: Object.entries(eventsData).map(([id,ev])=> ({id, ...ev})),
+      stockLog,
+      meatDefaults: meatDefaults || null,
+      buffetDefaults: buffetDefaults || null
+    };
+    const dateStr = new Date().toISOString().slice(0,10);
+    downloadJsonFile(`גיבוי-מערכת-${dateStr}.json`, backup);
+    showToast("הגיבוי הורד בהצלחה");
+  }).catch(err=>{
+    console.error(err);
+    showToast("שגיאה בהפקת הגיבוי: " + err.message, true);
+  }).finally(()=>{
+    btn.disabled = false;
+    btn.textContent = "⬇️ הורדת גיבוי מלא (JSON)";
+  });
+});
+
+/* מוחקת את כל המסמכים באוסף נתון, בצ'אנקים (Firestore batch מוגבל ל-500 פעולות) */
+async function deleteAllInCollection(collectionName, onProgress){
+  let deletedTotal = 0;
+  while (true){
+    const snap = await db.collection(collectionName).limit(400).get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    snap.forEach(doc=> batch.delete(doc.ref));
+    await batch.commit();
+    deletedTotal += snap.size;
+    if (onProgress) onProgress(deletedTotal);
+    if (snap.size < 400) break;
+  }
+  return deletedTotal;
+}
+
+$("#br-reset-btn").addEventListener("click", async ()=>{
+  if (!db){ showToast("אין חיבור למסד הנתונים", true); return; }
+  const confirmText = $("#br-confirm-input").value.trim();
+  if (confirmText !== "איפוס"){ showToast('יש להקליד "איפוס" בשדה כדי לאשר', true); return; }
+  const ok = confirm('לאפס לצמיתות את כל האירועים ואת כל יומן תנועות המלאי?\n\nפריטי המלאי (כולל כמויות) והגדרות תמהיל מגשי הבשר/בופה לא ייפגעו.\n\nפעולה זו בלתי הפיכה - מומלץ לוודא שהורדתם גיבוי לפני כן.');
+  if (!ok) return;
+
+  const btn = $("#br-reset-btn");
+  btn.disabled = true;
+  try{
+    $("#br-status").textContent = "מוחק אירועים...";
+    const evCount = await deleteAllInCollection("events", (n)=>{ $("#br-status").textContent = `מוחק אירועים... (${n})`; });
+    $("#br-status").textContent = "מוחק יומן תנועות מלאי...";
+    const logCount = await deleteAllInCollection("stockLog", (n)=>{ $("#br-status").textContent = `מוחק יומן תנועות מלאי... (${n})`; });
+    $("#br-status").textContent = `האיפוס הושלם: נמחקו ${evCount} אירועים ו-${logCount} תנועות מלאי.`;
+    $("#br-confirm-input").value = "";
+    showToast("האיפוס הושלם בהצלחה");
+  }catch(err){
+    console.error(err);
+    $("#br-status").textContent = "";
+    showToast("שגיאה באיפוס הנתונים: " + err.message, true);
+  }finally{
+    btn.disabled = false;
+  }
 });
 
 /* ---------- OWNER: FORECAST ---------- */
