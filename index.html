@@ -832,6 +832,8 @@ button{cursor:pointer;}
           <div class="split-row"><span class="split-row-name">בקר/צלי</span><input id="md-mix-beef" type="number" min="0" max="100" step="any" class="split-row-input" value="25"><span class="split-row-pct">%</span></div>
           <div class="split-row"><span class="split-row-name">אסאדו</span><input id="md-mix-asado" type="number" min="0" max="100" step="any" class="split-row-input" value="0"><span class="split-row-pct">%</span></div>
         </div>
+        <div id="md-custom-items" class="split-list" style="margin-bottom:8px;"></div>
+        <button type="button" id="md-add-custom-item" class="btn-ghost full" style="margin-bottom:4px;">+ הוסף פריט לתמהיל</button>
         <p id="md-mix-total-warn" class="hint-text hidden" style="color:var(--danger);"></p>
         <p class="hint-text">שיוך לפריטי מלאי בפועל (כדי שהמערכת תדע מאיזה פריט להוריד מלאי):</p>
         <label>פריט לפרגית<select id="md-item-pargit"></select></label>
@@ -855,8 +857,10 @@ button{cursor:pointer;}
           <div class="split-row"><span class="split-row-name">אסאדו</span><input id="md-buffet-mix-asado" type="number" min="0" max="100" step="any" class="split-row-input" value="0"><span class="split-row-pct">%</span></div>
           <div class="split-row"><span class="split-row-name">בשר טחון לעראייס</span><input id="md-buffet-mix-araayes" type="number" min="0" max="100" step="any" class="split-row-input" value="40"><span class="split-row-pct">%</span></div>
         </div>
+        <div id="md-buffet-custom-items" class="split-list" style="margin-bottom:8px;"></div>
+        <button type="button" id="md-buffet-add-custom-item" class="btn-ghost full" style="margin-bottom:4px;">+ הוסף פריט לתמהיל</button>
         <p id="md-buffet-mix-total-warn" class="hint-text hidden" style="color:var(--danger);"></p>
-        <p class="hint-text">פרגית/אנטריקוט/בקר/אסאדו יורדים אוטומטית מאותם פריטים שנבחרו בטאב "מנה עיקרית". רק לעראייס צריך לשייך פריט נפרד:</p>
+        <p class="hint-text">פרגית/אנטריקוט/בקר/אסאדו יורדים אוטומטית מאותם פריטים שנבחרו בטאב "מנה עיקרית". רק לעראייס וכן לפריטים מותאמים אישית שהוספתם צריך לשייך פריט נפרד:</p>
         <label>פריט לבשר טחון לעראייס<select id="md-buffet-item-araayes"></select></label>
         <button type="submit" class="btn-primary full">שמור הגדרות בופה</button>
       </form>
@@ -892,7 +896,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.23 - 2026-07-31";
+const APP_VERSION = "3.24 - 2026-07-30";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -938,19 +942,34 @@ function getMeatRoleForItem(id){
   if (meatDefaults.itemEntrecote === id) return "entrecote";
   if (meatDefaults.itemBeef === id) return "beef";
   if (meatDefaults.itemAsado === id) return "asado";
+  const custom = (meatDefaults.customItems||[]).find(c=> c.itemId === id);
+  if (custom) return custom.id;
   return null;
 }
 function getBuffetRoleForItem(id){
   if (!buffetDefaults || !id) return null;
   if (buffetDefaults.itemAraayes === id) return "araayes";
+  const custom = (buffetDefaults.customItems||[]).find(c=> c.itemId === id);
+  if (custom) return custom.id;
   return null;
 }
-/* מחזיר תיאור אחיד לתג המוצג על הפריט - בין אם הוא משויך למגש מנה עיקרית או למגש בופה (עראייס) */
+/* מחזיר תווית תצוגה לתפקיד מגש - בין אם זה אחד מהתפקידים הקבועים או פריט מותאם אישית שנוסף לתמהיל */
+function getMeatRoleLabel(role){
+  if (MEAT_ROLE_LABELS[role]) return MEAT_ROLE_LABELS[role];
+  const custom = meatDefaults && (meatDefaults.customItems||[]).find(c=> c.id === role);
+  return custom ? custom.label : role;
+}
+function getBuffetRoleLabel(role){
+  if (BUFFET_ONLY_ROLE_LABELS[role]) return BUFFET_ONLY_ROLE_LABELS[role];
+  const custom = buffetDefaults && (buffetDefaults.customItems||[]).find(c=> c.id === role);
+  return custom ? custom.label : role;
+}
+/* מחזיר תיאור אחיד לתג המוצג על הפריט - בין אם הוא משויך למגש מנה עיקרית או למגש בופה (כולל פריטים מותאמים אישית) */
 function getTrayAssociation(id){
   const mainRole = getMeatRoleForItem(id);
-  if (mainRole) return { kind:"main", emoji:"🥩", label: `מגשי בשר (${MEAT_ROLE_LABELS[mainRole]})` };
+  if (mainRole) return { kind:"main", emoji:"🥩", label: `מגשי בשר (${getMeatRoleLabel(mainRole)})` };
   const buffetRole = getBuffetRoleForItem(id);
-  if (buffetRole) return { kind:"buffet", emoji:"🍽", label: `מגשי בופה (${BUFFET_ONLY_ROLE_LABELS[buffetRole]})` };
+  if (buffetRole) return { kind:"buffet", emoji:"🍽", label: `מגשי בופה (${getBuffetRoleLabel(buffetRole)})` };
   return null;
 }
 let currentRole = null; // 'warehouse' | 'owner'
@@ -1946,14 +1965,47 @@ function renderEventsList(){
 function effectiveMainMixValue(ev, role){
   if (ev.meatMixOverride && ev.meatMixOverride[role] != null) return ev.meatMixOverride[role];
   const fieldMap = {pargit:"mixPargit", entrecote:"mixEntrecote", beef:"mixBeef", asado:"mixAsado"};
-  if (meatDefaults && meatDefaults[fieldMap[role]] != null) return meatDefaults[fieldMap[role]];
-  return {pargit:40, entrecote:35, beef:25, asado:0}[role];
+  if (fieldMap[role]){
+    if (meatDefaults && meatDefaults[fieldMap[role]] != null) return meatDefaults[fieldMap[role]];
+    return {pargit:40, entrecote:35, beef:25, asado:0}[role];
+  }
+  const custom = meatDefaults && (meatDefaults.customItems||[]).find(c=> c.id === role);
+  return custom ? (Number(custom.pct)||0) : 0;
 }
 function effectiveBuffetMixValue(ev, role){
   if (ev.buffetMixOverride && ev.buffetMixOverride[role] != null) return ev.buffetMixOverride[role];
   const fieldMap = {pargit:"mixPargit", entrecote:"mixEntrecote", beef:"mixBeef", asado:"mixAsado", araayes:"mixAraayes"};
-  if (buffetDefaults && buffetDefaults[fieldMap[role]] != null) return buffetDefaults[fieldMap[role]];
-  return {pargit:25, entrecote:20, beef:15, asado:0, araayes:40}[role];
+  if (fieldMap[role]){
+    if (buffetDefaults && buffetDefaults[fieldMap[role]] != null) return buffetDefaults[fieldMap[role]];
+    return {pargit:25, entrecote:20, beef:15, asado:0, araayes:40}[role];
+  }
+  const custom = buffetDefaults && (buffetDefaults.customItems||[]).find(c=> c.id === role);
+  return custom ? (Number(custom.pct)||0) : 0;
+}
+/* רשימת התפקידים להצגה בטופס עריכת אירוע - תפקידים קבועים + פריטים מותאמים אישית שהוגדרו בתמהיל */
+function mainMixRolesForUI(){
+  const fixed = [
+    {role:"pargit", label: MEAT_ROLE_LABELS.pargit},
+    {role:"entrecote", label: MEAT_ROLE_LABELS.entrecote},
+    {role:"beef", label: MEAT_ROLE_LABELS.beef},
+    {role:"asado", label: MEAT_ROLE_LABELS.asado}
+  ];
+  const custom = (meatDefaults && meatDefaults.customItems || []).map(c=> ({role:c.id, label:c.label}));
+  return fixed.concat(custom);
+}
+function buffetMixRolesForUI(){
+  const fixed = [
+    {role:"pargit", label: MEAT_ROLE_LABELS.pargit},
+    {role:"entrecote", label: MEAT_ROLE_LABELS.entrecote},
+    {role:"beef", label: MEAT_ROLE_LABELS.beef},
+    {role:"asado", label: MEAT_ROLE_LABELS.asado},
+    {role:"araayes", label: BUFFET_ONLY_ROLE_LABELS.araayes}
+  ];
+  const custom = (buffetDefaults && buffetDefaults.customItems || []).map(c=> ({role:c.id, label:c.label}));
+  return fixed.concat(custom);
+}
+function buildMixRowsHtml(roles, ev, valueFn, inputClass){
+  return roles.map(r=> `<div class="split-row"><span class="split-row-name">${escapeHtml(r.label)}</span><input type="number" min="0" max="100" step="any" class="split-row-input ${inputClass}" data-role="${escapeAttr(r.role)}" value="${valueFn(ev, r.role)}"><span class="split-row-pct">%</span></div>`).join("");
 }
 function eventEditFieldsTemplate(ev){
   return `
@@ -1980,10 +2032,7 @@ function eventEditFieldsTemplate(ev){
       <div class="full-span" data-role="eev-mix-wrap" style="${ev.category!=="meat" ? "display:none;" : ""}">
         <p class="hint-text" style="margin-bottom:8px;">התאמת תמהיל מנה עיקרית לאירוע זה (סה"כ חייב 100%)</p>
         <div class="split-list" style="margin-bottom:6px;">
-          <div class="split-row"><span class="split-row-name">פרגית</span><input type="number" min="0" max="100" step="any" class="split-row-input eev-mix-input" data-role="pargit" value="${effectiveMainMixValue(ev,"pargit")}"><span class="split-row-pct">%</span></div>
-          <div class="split-row"><span class="split-row-name">אנטריקוט</span><input type="number" min="0" max="100" step="any" class="split-row-input eev-mix-input" data-role="entrecote" value="${effectiveMainMixValue(ev,"entrecote")}"><span class="split-row-pct">%</span></div>
-          <div class="split-row"><span class="split-row-name">בקר/צלי</span><input type="number" min="0" max="100" step="any" class="split-row-input eev-mix-input" data-role="beef" value="${effectiveMainMixValue(ev,"beef")}"><span class="split-row-pct">%</span></div>
-          <div class="split-row"><span class="split-row-name">אסאדו</span><input type="number" min="0" max="100" step="any" class="split-row-input eev-mix-input" data-role="asado" value="${effectiveMainMixValue(ev,"asado")}"><span class="split-row-pct">%</span></div>
+          ${buildMixRowsHtml(mainMixRolesForUI(), ev, effectiveMainMixValue, "eev-mix-input")}
         </div>
         <p class="eev-mix-warn hint-text hidden" style="color:var(--danger);"></p>
         <button type="button" class="btn-ghost eev-mix-reset" style="padding:7px;font-size:12px;">איפוס לברירת המחדל</button>
@@ -1991,11 +2040,7 @@ function eventEditFieldsTemplate(ev){
       <div class="full-span" data-role="eev-buffet-mix-wrap" style="${(ev.category!=="meat" || !ev.includesBuffet) ? "display:none;" : ""}">
         <p class="hint-text" style="margin-bottom:8px;">התאמת תמהיל בופה לאירוע זה (סה"כ חייב 100%)</p>
         <div class="split-list" style="margin-bottom:6px;">
-          <div class="split-row"><span class="split-row-name">פרגית</span><input type="number" min="0" max="100" step="any" class="split-row-input eev-buffet-mix-input" data-role="pargit" value="${effectiveBuffetMixValue(ev,"pargit")}"><span class="split-row-pct">%</span></div>
-          <div class="split-row"><span class="split-row-name">אנטריקוט</span><input type="number" min="0" max="100" step="any" class="split-row-input eev-buffet-mix-input" data-role="entrecote" value="${effectiveBuffetMixValue(ev,"entrecote")}"><span class="split-row-pct">%</span></div>
-          <div class="split-row"><span class="split-row-name">בקר/צלי</span><input type="number" min="0" max="100" step="any" class="split-row-input eev-buffet-mix-input" data-role="beef" value="${effectiveBuffetMixValue(ev,"beef")}"><span class="split-row-pct">%</span></div>
-          <div class="split-row"><span class="split-row-name">אסאדו</span><input type="number" min="0" max="100" step="any" class="split-row-input eev-buffet-mix-input" data-role="asado" value="${effectiveBuffetMixValue(ev,"asado")}"><span class="split-row-pct">%</span></div>
-          <div class="split-row"><span class="split-row-name">בשר טחון לעראייס</span><input type="number" min="0" max="100" step="any" class="split-row-input eev-buffet-mix-input" data-role="araayes" value="${effectiveBuffetMixValue(ev,"araayes")}"><span class="split-row-pct">%</span></div>
+          ${buildMixRowsHtml(buffetMixRolesForUI(), ev, effectiveBuffetMixValue, "eev-buffet-mix-input")}
         </div>
         <p class="eev-buffet-mix-warn hint-text hidden" style="color:var(--danger);"></p>
         <button type="button" class="btn-ghost eev-buffet-mix-reset" style="padding:7px;font-size:12px;">איפוס לברירת המחדל</button>
@@ -2023,19 +2068,30 @@ function wireEventEditRow(row, id){
   row.querySelectorAll(".eev-buffet-mix-input").forEach(inp=> inp.addEventListener("input", ()=> checkRowMixTotal(".eev-buffet-mix-input", ".eev-buffet-mix-warn")));
   row.querySelector(".eev-mix-reset").addEventListener("click", ()=>{
     const d = meatDefaults || {};
-    row.querySelector('.eev-mix-input[data-role="pargit"]').value = d.mixPargit != null ? d.mixPargit : 40;
-    row.querySelector('.eev-mix-input[data-role="entrecote"]').value = d.mixEntrecote != null ? d.mixEntrecote : 35;
-    row.querySelector('.eev-mix-input[data-role="beef"]').value = d.mixBeef != null ? d.mixBeef : 25;
-    row.querySelector('.eev-mix-input[data-role="asado"]').value = d.mixAsado != null ? d.mixAsado : 0;
+    const fixedDefaults = {pargit: d.mixPargit != null ? d.mixPargit : 40, entrecote: d.mixEntrecote != null ? d.mixEntrecote : 35, beef: d.mixBeef != null ? d.mixBeef : 25, asado: d.mixAsado != null ? d.mixAsado : 0};
+    row.querySelectorAll(".eev-mix-input").forEach(inp=>{
+      const role = inp.dataset.role;
+      if (fixedDefaults[role] != null){
+        inp.value = fixedDefaults[role];
+      } else {
+        const custom = (d.customItems||[]).find(c=> c.id === role);
+        inp.value = custom ? (Number(custom.pct)||0) : 0;
+      }
+    });
     checkRowMixTotal(".eev-mix-input", ".eev-mix-warn");
   });
   row.querySelector(".eev-buffet-mix-reset").addEventListener("click", ()=>{
     const bd = buffetDefaults || {};
-    row.querySelector('.eev-buffet-mix-input[data-role="pargit"]').value = bd.mixPargit != null ? bd.mixPargit : 25;
-    row.querySelector('.eev-buffet-mix-input[data-role="entrecote"]').value = bd.mixEntrecote != null ? bd.mixEntrecote : 20;
-    row.querySelector('.eev-buffet-mix-input[data-role="beef"]').value = bd.mixBeef != null ? bd.mixBeef : 15;
-    row.querySelector('.eev-buffet-mix-input[data-role="asado"]').value = bd.mixAsado != null ? bd.mixAsado : 0;
-    row.querySelector('.eev-buffet-mix-input[data-role="araayes"]').value = bd.mixAraayes != null ? bd.mixAraayes : 40;
+    const fixedDefaults = {pargit: bd.mixPargit != null ? bd.mixPargit : 25, entrecote: bd.mixEntrecote != null ? bd.mixEntrecote : 20, beef: bd.mixBeef != null ? bd.mixBeef : 15, asado: bd.mixAsado != null ? bd.mixAsado : 0, araayes: bd.mixAraayes != null ? bd.mixAraayes : 40};
+    row.querySelectorAll(".eev-buffet-mix-input").forEach(inp=>{
+      const role = inp.dataset.role;
+      if (fixedDefaults[role] != null){
+        inp.value = fixedDefaults[role];
+      } else {
+        const custom = (bd.customItems||[]).find(c=> c.id === role);
+        inp.value = custom ? (Number(custom.pct)||0) : 0;
+      }
+    });
     checkRowMixTotal(".eev-buffet-mix-input", ".eev-buffet-mix-warn");
   });
   row.querySelector(".eev-category").addEventListener("change", ()=>{
@@ -2094,6 +2150,56 @@ $all(".md-tabs .tab-btn").forEach(btn=>{
     $("#md-tab-buffet").classList.toggle("hidden", btn.dataset.mdTab !== "buffet");
   });
 });
+/* פריטים מותאמים אישית שנוספים לתמהיל מגשי הבשר (מנה עיקרית ובופה) - מנוהלים כטיוטה מקומית בזמן שהגיליון פתוח,
+   ונשמרים ל-Firestore רק בלחיצה על "שמור הגדרות". כל פריט: {id, label, pct, itemId} */
+let mdCustomItemsDraft = [];
+let mdBuffetCustomItemsDraft = [];
+function genCustomItemId(){ return "c" + Date.now() + Math.floor(Math.random()*1000); }
+function meatItemSelectOptionsHtml(){
+  return `<option value="">בחרו פריט...</option>` + Object.entries(itemsData)
+    .filter(([id,it]) => it.category === "meat")
+    .sort((a,b)=> (a[1].name||"").localeCompare(b[1].name||"", "he"))
+    .map(([id,it])=>`<option value="${id}">${escapeHtml(it.name)}</option>`).join("");
+}
+function renderCustomItemsEditor(containerSel, draftArr, onChange){
+  const container = $(containerSel);
+  container.innerHTML = "";
+  const optionsHtml = meatItemSelectOptionsHtml();
+  draftArr.forEach((c, idx)=>{
+    const row = document.createElement("div");
+    row.className = "split-row";
+    row.style.flexWrap = "wrap";
+    row.innerHTML = `
+      <input type="text" class="split-row-input mci-label" style="flex:1;min-width:100px;text-align:right;" placeholder="שם הפריט בתמהיל" value="${escapeAttr(c.label||"")}">
+      <input type="number" min="0" max="100" step="any" class="split-row-input mci-pct" style="width:56px;flex:none;" value="${c.pct||0}">
+      <span class="split-row-pct">%</span>
+      <select class="mci-item" style="flex:2;min-width:120px;">${optionsHtml}</select>
+      <button type="button" class="mini-btn danger mci-del" title="מחיקה">🗑</button>
+    `;
+    row.querySelector(".mci-item").value = c.itemId || "";
+    row.querySelector(".mci-label").addEventListener("input", (e)=>{ c.label = e.target.value; });
+    row.querySelector(".mci-pct").addEventListener("input", (e)=>{ c.pct = parseFloat(e.target.value)||0; onChange(); });
+    row.querySelector(".mci-item").addEventListener("change", (e)=>{ c.itemId = e.target.value; });
+    row.querySelector(".mci-del").addEventListener("click", ()=>{
+      const i = draftArr.indexOf(c);
+      if (i > -1) draftArr.splice(i,1);
+      renderCustomItemsEditor(containerSel, draftArr, onChange);
+      onChange();
+    });
+    container.appendChild(row);
+  });
+}
+$("#md-add-custom-item").addEventListener("click", ()=>{
+  mdCustomItemsDraft.push({id: genCustomItemId(), label:"", pct:0, itemId:""});
+  renderCustomItemsEditor("#md-custom-items", mdCustomItemsDraft, checkMeatMixTotal);
+  checkMeatMixTotal();
+});
+$("#md-buffet-add-custom-item").addEventListener("click", ()=>{
+  mdBuffetCustomItemsDraft.push({id: genCustomItemId(), label:"", pct:0, itemId:""});
+  renderCustomItemsEditor("#md-buffet-custom-items", mdBuffetCustomItemsDraft, checkBuffetMixTotal);
+  checkBuffetMixTotal();
+});
+
 function populateMeatItemSelects(){
   const meatItems = Object.entries(itemsData)
     .filter(([id,it]) => it.category === "meat")
@@ -2111,7 +2217,8 @@ function populateMeatItemSelects(){
   araayesSel.value = araayesCurrent || "";
 }
 function checkMeatMixTotal(){
-  const total = (parseFloat($("#md-mix-pargit").value)||0) + (parseFloat($("#md-mix-entrecote").value)||0) + (parseFloat($("#md-mix-beef").value)||0) + (parseFloat($("#md-mix-asado").value)||0);
+  const customTotal = mdCustomItemsDraft.reduce((s,c)=> s + (Number(c.pct)||0), 0);
+  const total = (parseFloat($("#md-mix-pargit").value)||0) + (parseFloat($("#md-mix-entrecote").value)||0) + (parseFloat($("#md-mix-beef").value)||0) + (parseFloat($("#md-mix-asado").value)||0) + customTotal;
   const warnEl = $("#md-mix-total-warn");
   if (Math.round(total) !== 100){
     warnEl.textContent = `שימו לב: סכום האחוזים הוא ${fmtNum(total)}%, לא 100%.`;
@@ -2122,7 +2229,8 @@ function checkMeatMixTotal(){
 }
 ["#md-mix-pargit","#md-mix-entrecote","#md-mix-beef","#md-mix-asado"].forEach(sel=> $(sel).addEventListener("input", checkMeatMixTotal));
 function checkBuffetMixTotal(){
-  const total = (parseFloat($("#md-buffet-mix-pargit").value)||0) + (parseFloat($("#md-buffet-mix-entrecote").value)||0) + (parseFloat($("#md-buffet-mix-beef").value)||0) + (parseFloat($("#md-buffet-mix-asado").value)||0) + (parseFloat($("#md-buffet-mix-araayes").value)||0);
+  const customTotal = mdBuffetCustomItemsDraft.reduce((s,c)=> s + (Number(c.pct)||0), 0);
+  const total = (parseFloat($("#md-buffet-mix-pargit").value)||0) + (parseFloat($("#md-buffet-mix-entrecote").value)||0) + (parseFloat($("#md-buffet-mix-beef").value)||0) + (parseFloat($("#md-buffet-mix-asado").value)||0) + (parseFloat($("#md-buffet-mix-araayes").value)||0) + customTotal;
   const warnEl = $("#md-buffet-mix-total-warn");
   if (Math.round(total) !== 100){
     warnEl.textContent = `שימו לב: סכום האחוזים הוא ${fmtNum(total)}%, לא 100%.`;
@@ -2146,6 +2254,8 @@ function openMeatDefaultsSheet(){
   $("#md-item-entrecote").value = d.itemEntrecote || "";
   $("#md-item-beef").value = d.itemBeef || "";
   $("#md-item-asado").value = d.itemAsado || "";
+  mdCustomItemsDraft = (d.customItems || []).map(c=> ({...c}));
+  renderCustomItemsEditor("#md-custom-items", mdCustomItemsDraft, checkMeatMixTotal);
   checkMeatMixTotal();
 
   const bd = buffetDefaults || {};
@@ -2157,6 +2267,8 @@ function openMeatDefaultsSheet(){
   $("#md-buffet-mix-asado").value = bd.mixAsado != null ? bd.mixAsado : 0;
   $("#md-buffet-mix-araayes").value = bd.mixAraayes != null ? bd.mixAraayes : 40;
   $("#md-buffet-item-araayes").value = bd.itemAraayes || "";
+  mdBuffetCustomItemsDraft = (bd.customItems || []).map(c=> ({...c}));
+  renderCustomItemsEditor("#md-buffet-custom-items", mdBuffetCustomItemsDraft, checkBuffetMixTotal);
   checkBuffetMixTotal();
 
   $("#meat-defaults-sheet").classList.remove("hidden");
@@ -2179,7 +2291,10 @@ $("#meat-defaults-form").addEventListener("submit", (e)=>{
     itemPargit: $("#md-item-pargit").value || "",
     itemEntrecote: $("#md-item-entrecote").value || "",
     itemBeef: $("#md-item-beef").value || "",
-    itemAsado: $("#md-item-asado").value || ""
+    itemAsado: $("#md-item-asado").value || "",
+    customItems: mdCustomItemsDraft
+      .filter(c=> (c.label||"").trim())
+      .map(c=> ({id: c.id, label: (c.label||"").trim(), pct: Number(c.pct)||0, itemId: c.itemId || ""}))
   };
   db.collection("settings").doc("meatDefaults").set(data).then(()=>{
     showToast("הגדרות מנה עיקרית נשמרו");
@@ -2198,7 +2313,10 @@ $("#buffet-defaults-form").addEventListener("submit", (e)=>{
     mixBeef: parseFloat($("#md-buffet-mix-beef").value) || 0,
     mixAsado: parseFloat($("#md-buffet-mix-asado").value) || 0,
     mixAraayes: parseFloat($("#md-buffet-mix-araayes").value) || 0,
-    itemAraayes: $("#md-buffet-item-araayes").value || ""
+    itemAraayes: $("#md-buffet-item-araayes").value || "",
+    customItems: mdBuffetCustomItemsDraft
+      .filter(c=> (c.label||"").trim())
+      .map(c=> ({id: c.id, label: (c.label||"").trim(), pct: Number(c.pct)||0, itemId: c.itemId || ""}))
   };
   db.collection("settings").doc("buffetDefaults").set(data).then(()=>{
     showToast("הגדרות בופה נשמרו");
@@ -2234,8 +2352,14 @@ function neededForEvents(events, item){
    לפי אותו מנגנון מגשים מעוגל-למעלה שבאמת רץ בניכוי בפועל (📉), ולא לפי "צריכה לאורח" הישן.
    לפריטים לא-משויכים, מתנהגת בדיוק כמו neededForEvents הרגילה. */
 function isTrayManagedItem(itemId){
-  if (meatDefaults && [meatDefaults.itemPargit, meatDefaults.itemEntrecote, meatDefaults.itemBeef, meatDefaults.itemAsado].includes(itemId)) return true;
-  if (buffetDefaults && buffetDefaults.itemAraayes === itemId) return true;
+  if (meatDefaults){
+    if ([meatDefaults.itemPargit, meatDefaults.itemEntrecote, meatDefaults.itemBeef, meatDefaults.itemAsado].includes(itemId)) return true;
+    if ((meatDefaults.customItems||[]).some(c=> c.itemId === itemId)) return true;
+  }
+  if (buffetDefaults){
+    if (buffetDefaults.itemAraayes === itemId) return true;
+    if ((buffetDefaults.customItems||[]).some(c=> c.itemId === itemId)) return true;
+  }
   return false;
 }
 function neededForEventsTrayAware(events, itemId, item){
@@ -2262,21 +2386,24 @@ function computeMeatTrayPlan(guestCount, mixOverride){
   const trayCap = Number(meatDefaults.trayCapacityKg) || 0;
   const guestMeatKg = Number(meatDefaults.guestMeatKg) || 0;
   const totalKg = Number(guestCount||0) * guestMeatKg;
-  function pctFor(role, defaultField){
+  function pctFor(role, defaultPct){
     if (mixOverride && mixOverride[role] != null) return Number(mixOverride[role]) || 0;
-    return Number(meatDefaults[defaultField]) || 0;
+    return Number(defaultPct) || 0;
   }
   const roles = [
-    { role:"pargit", pct: pctFor("pargit","mixPargit"), itemId: meatDefaults.itemPargit||"" },
-    { role:"entrecote", pct: pctFor("entrecote","mixEntrecote"), itemId: meatDefaults.itemEntrecote||"" },
-    { role:"beef", pct: pctFor("beef","mixBeef"), itemId: meatDefaults.itemBeef||"" },
-    { role:"asado", pct: pctFor("asado","mixAsado"), itemId: meatDefaults.itemAsado||"" }
+    { role:"pargit", label: MEAT_ROLE_LABELS.pargit, pct: pctFor("pargit", meatDefaults.mixPargit), itemId: meatDefaults.itemPargit||"" },
+    { role:"entrecote", label: MEAT_ROLE_LABELS.entrecote, pct: pctFor("entrecote", meatDefaults.mixEntrecote), itemId: meatDefaults.itemEntrecote||"" },
+    { role:"beef", label: MEAT_ROLE_LABELS.beef, pct: pctFor("beef", meatDefaults.mixBeef), itemId: meatDefaults.itemBeef||"" },
+    { role:"asado", label: MEAT_ROLE_LABELS.asado, pct: pctFor("asado", meatDefaults.mixAsado), itemId: meatDefaults.itemAsado||"" }
   ];
+  (meatDefaults.customItems||[]).forEach(c=>{
+    roles.push({ role: c.id, label: c.label, pct: pctFor(c.id, c.pct), itemId: c.itemId||"" });
+  });
   return roles.map(r=>{
     const kg = totalKg * (r.pct/100);
     const trays = trayCap > 0 ? Math.ceil(kg / trayCap) : 0;
     const deductKg = trays * trayCap;
-    return { role:r.role, label: MEAT_ROLE_LABELS[r.role], itemId: r.itemId, pct: r.pct, kg, trays, deductKg };
+    return { role:r.role, label: r.label, itemId: r.itemId, pct: r.pct, kg, trays, deductKg };
   });
 }
 function meatTrayPlanSummaryText(guestCount, mixOverride){
@@ -2299,17 +2426,20 @@ function computeBuffetTrayPlan(guestCount, mixOverride){
   const guestMeatKg = Number(buffetDefaults.guestMeatKg) || 0;
   const totalKg = Number(guestCount||0) * guestMeatKg;
   const md = meatDefaults || {};
-  function pctFor(role, defaultField){
+  function pctFor(role, defaultPct){
     if (mixOverride && mixOverride[role] != null) return Number(mixOverride[role]) || 0;
-    return Number(buffetDefaults[defaultField]) || 0;
+    return Number(defaultPct) || 0;
   }
   const roles = [
-    { role:"pargit", pct: pctFor("pargit","mixPargit"), itemId: md.itemPargit||"", label: MEAT_ROLE_LABELS.pargit },
-    { role:"entrecote", pct: pctFor("entrecote","mixEntrecote"), itemId: md.itemEntrecote||"", label: MEAT_ROLE_LABELS.entrecote },
-    { role:"beef", pct: pctFor("beef","mixBeef"), itemId: md.itemBeef||"", label: MEAT_ROLE_LABELS.beef },
-    { role:"asado", pct: pctFor("asado","mixAsado"), itemId: md.itemAsado||"", label: MEAT_ROLE_LABELS.asado },
-    { role:"araayes", pct: pctFor("araayes","mixAraayes"), itemId: buffetDefaults.itemAraayes||"", label: BUFFET_ONLY_ROLE_LABELS.araayes }
+    { role:"pargit", pct: pctFor("pargit", buffetDefaults.mixPargit), itemId: md.itemPargit||"", label: MEAT_ROLE_LABELS.pargit },
+    { role:"entrecote", pct: pctFor("entrecote", buffetDefaults.mixEntrecote), itemId: md.itemEntrecote||"", label: MEAT_ROLE_LABELS.entrecote },
+    { role:"beef", pct: pctFor("beef", buffetDefaults.mixBeef), itemId: md.itemBeef||"", label: MEAT_ROLE_LABELS.beef },
+    { role:"asado", pct: pctFor("asado", buffetDefaults.mixAsado), itemId: md.itemAsado||"", label: MEAT_ROLE_LABELS.asado },
+    { role:"araayes", pct: pctFor("araayes", buffetDefaults.mixAraayes), itemId: buffetDefaults.itemAraayes||"", label: BUFFET_ONLY_ROLE_LABELS.araayes }
   ];
+  (buffetDefaults.customItems||[]).forEach(c=>{
+    roles.push({ role: c.id, pct: pctFor(c.id, c.pct), itemId: c.itemId||"", label: c.label });
+  });
   return roles.map(r=>{
     const kg = totalKg * (r.pct/100);
     const trays = trayCap > 0 ? Math.ceil(kg / trayCap) : 0;
