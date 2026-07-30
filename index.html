@@ -838,6 +838,21 @@ button{cursor:pointer;}
     <button id="br-backup-btn" class="btn-primary full" type="button">⬇️ הורדת גיבוי מלא (JSON)</button>
 
     <div style="height:18px;"></div>
+    <p class="hint-text" style="background:var(--accent-tint);color:var(--accent-dark);">
+      ⬆ שחזור מקובץ גיבוי (JSON) שהורדתם בעבר - <b>ידרוס לחלוטין</b> את כל הפריטים, האירועים, יומן תנועות המלאי והגדרות התמהיל הקיימים כרגע במערכת, ויחליף אותם בתוכן שבקובץ.
+    </p>
+    <input type="file" id="br-restore-file-input" accept="application/json,.json" class="hidden">
+    <button id="br-restore-pick-btn" class="btn-ghost full" type="button">⬆️ בחירת קובץ גיבוי לשחזור</button>
+    <p id="br-restore-summary" class="hint-text hidden"></p>
+    <div id="br-restore-confirm-wrap" class="hidden">
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--ink-soft);margin:10px 0;">
+        להמשך, הקלידו כאן "שחזור"
+        <input id="br-restore-confirm-input" type="text" placeholder='הקלידו "שחזור"'>
+      </label>
+      <button id="br-restore-btn" class="btn-primary full" type="button" style="background:linear-gradient(180deg,var(--danger),#a52d1c);">⬆️ שחזור - דריסת כל הנתונים הקיימים</button>
+    </div>
+
+    <div style="height:18px;"></div>
     <p class="hint-text" style="background:var(--danger-tint);color:var(--danger);">
       ⚠ האיפוס ימחק לצמיתות את כל <b>האירועים</b> ואת כל <b>יומן תנועות המלאי</b> בלבד.<br>
       פריטי המלאי (כולל הכמויות שבמחסן) והגדרות תמהיל מגשי הבשר/בופה <b>לא</b> יימחקו ולא ישתנו - מתאים לאיפוס לפני עלייה לפרודקשן בלי לאבד את ההגדרות שכיילתם.
@@ -939,7 +954,7 @@ const PINS = {
 };
 
 /* מספר גרסה - מתעדכן בכל שינוי, מוצג במסך הכניסה כדי לוודא שההעלאה ל-GitHub הצליחה */
-const APP_VERSION = "3.26 - 2026-07-30";
+const APP_VERSION = "3.27 - 2026-07-30";
 
 /* =====================================================================
    אתחול Firebase (משתמשים ב-Cloud Firestore)
@@ -2387,6 +2402,10 @@ function openBackupResetSheet(){
   $("#br-confirm-input").value = "";
   $("#br-status").textContent = "";
   $("#br-reset-btn").disabled = false;
+  $("#br-restore-summary").classList.add("hidden");
+  $("#br-restore-confirm-wrap").classList.add("hidden");
+  $("#br-restore-confirm-input").value = "";
+  pendingRestoreData = null;
   $("#backup-reset-sheet").classList.remove("hidden");
 }
 function closeBackupResetSheet(){
@@ -2458,6 +2477,120 @@ async function deleteAllInCollection(collectionName, onProgress){
   }
   return deletedTotal;
 }
+
+/* ---- שחזור מקובץ גיבוי JSON ---- */
+let pendingRestoreData = null;
+function chunkArray(arr, size){
+  const out = [];
+  for (let i=0; i<arr.length; i+=size) out.push(arr.slice(i, i+size));
+  return out;
+}
+/* כותבת מסמכים לאוסף נתון תוך שימור ה-id המקורי מהגיבוי (כדי ששיוכי פריט-למגש וכו' יישארו תקינים) */
+async function writeDocsWithIds(collectionName, docsArray, onProgress){
+  let written = 0;
+  const chunks = chunkArray(docsArray, 400);
+  for (const chunk of chunks){
+    const batch = db.batch();
+    chunk.forEach(d=>{
+      const { id, ...rest } = d;
+      if (!id) return;
+      batch.set(db.collection(collectionName).doc(id), rest);
+    });
+    await batch.commit();
+    written += chunk.length;
+    if (onProgress) onProgress(written);
+  }
+  return written;
+}
+
+$("#br-restore-pick-btn").addEventListener("click", ()=> $("#br-restore-file-input").click());
+$("#br-restore-file-input").addEventListener("change", (e)=>{
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const parsed = JSON.parse(ev.target.result);
+      if (!parsed || (!Array.isArray(parsed.items) && !Array.isArray(parsed.events) && !Array.isArray(parsed.stockLog))){
+        showToast("קובץ לא נראה כמו קובץ גיבוי תקין של המערכת", true);
+        return;
+      }
+      pendingRestoreData = parsed;
+      const itemsCount = (parsed.items||[]).length;
+      const eventsCount = (parsed.events||[]).length;
+      const logCount = (parsed.stockLog||[]).length;
+      const dateNote = parsed.exportedAt ? ` · גובה בתאריך ${new Date(parsed.exportedAt).toLocaleString("he-IL")}` : "";
+      $("#br-restore-summary").textContent = `הקובץ נטען: ${itemsCount} פריטים, ${eventsCount} אירועים, ${logCount} תנועות מלאי${dateNote}.`;
+      $("#br-restore-summary").classList.remove("hidden");
+      $("#br-restore-confirm-wrap").classList.remove("hidden");
+      $("#br-restore-confirm-input").value = "";
+    }catch(err){
+      console.error(err);
+      showToast("קובץ לא תקין - לא ניתן לקרוא כ-JSON", true);
+    }
+  };
+  reader.readAsText(file);
+});
+
+$("#br-restore-btn").addEventListener("click", async ()=>{
+  if (!db){ showToast("אין חיבור למסד הנתונים", true); return; }
+  if (!pendingRestoreData){ showToast("קודם בחרו קובץ גיבוי", true); return; }
+  const confirmText = $("#br-restore-confirm-input").value.trim();
+  if (confirmText !== "שחזור"){ showToast('יש להקליד "שחזור" בשדה כדי לאשר', true); return; }
+  const ok = confirm("השחזור ימחק את כל הפריטים, האירועים, יומן תנועות המלאי והגדרות התמהיל הקיימים במערכת כרגע, ויחליף אותם בתוכן מהקובץ. פעולה זו בלתי הפיכה. להמשיך?");
+  if (!ok) return;
+
+  const btn = $("#br-restore-btn");
+  btn.disabled = true;
+  try{
+    $("#br-status").textContent = "מוחק פריטים קיימים...";
+    await deleteAllInCollection("items", (n)=>{ $("#br-status").textContent = `מוחק פריטים קיימים... (${n})`; });
+    $("#br-status").textContent = "מוחק אירועים קיימים...";
+    await deleteAllInCollection("events", (n)=>{ $("#br-status").textContent = `מוחק אירועים קיימים... (${n})`; });
+    $("#br-status").textContent = "מוחק יומן תנועות מלאי קיים...";
+    await deleteAllInCollection("stockLog", (n)=>{ $("#br-status").textContent = `מוחק יומן תנועות מלאי קיים... (${n})`; });
+
+    $("#br-status").textContent = "משחזר פריטים...";
+    const itemsWritten = await writeDocsWithIds("items", pendingRestoreData.items||[], (n)=>{ $("#br-status").textContent = `משחזר פריטים... (${n})`; });
+
+    $("#br-status").textContent = "משחזר אירועים...";
+    const eventsWritten = await writeDocsWithIds("events", pendingRestoreData.events||[], (n)=>{ $("#br-status").textContent = `משחזר אירועים... (${n})`; });
+
+    $("#br-status").textContent = "משחזר יומן תנועות מלאי...";
+    const logDocs = (pendingRestoreData.stockLog||[]).map(d=>{
+      const { id, timestamp, ...rest } = d;
+      let ts;
+      if (timestamp){
+        try{ ts = firebase.firestore.Timestamp.fromDate(new Date(timestamp)); }
+        catch(e){ ts = firebase.firestore.FieldValue.serverTimestamp(); }
+      } else {
+        ts = firebase.firestore.FieldValue.serverTimestamp();
+      }
+      return { id, ...rest, timestamp: ts };
+    });
+    const logWritten = await writeDocsWithIds("stockLog", logDocs, (n)=>{ $("#br-status").textContent = `משחזר יומן תנועות מלאי... (${n})`; });
+
+    if (pendingRestoreData.meatDefaults){
+      await db.collection("settings").doc("meatDefaults").set(pendingRestoreData.meatDefaults);
+    }
+    if (pendingRestoreData.buffetDefaults){
+      await db.collection("settings").doc("buffetDefaults").set(pendingRestoreData.buffetDefaults);
+    }
+
+    $("#br-status").textContent = `השחזור הושלם: ${itemsWritten} פריטים, ${eventsWritten} אירועים, ${logWritten} תנועות מלאי.`;
+    showToast("השחזור הושלם בהצלחה");
+    pendingRestoreData = null;
+    $("#br-restore-confirm-input").value = "";
+    $("#br-restore-confirm-wrap").classList.add("hidden");
+    $("#br-restore-summary").classList.add("hidden");
+  }catch(err){
+    console.error(err);
+    showToast("שגיאה בשחזור הנתונים: " + err.message, true);
+  }finally{
+    btn.disabled = false;
+  }
+});
 
 $("#br-reset-btn").addEventListener("click", async ()=>{
   if (!db){ showToast("אין חיבור למסד הנתונים", true); return; }
